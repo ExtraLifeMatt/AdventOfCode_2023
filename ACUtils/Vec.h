@@ -153,6 +153,9 @@ public:
 	float DistanceSquared(const Vec4& Dest) const;
 	float Distance(const Vec4& Dest) const;
 
+	Vec4 Normalized() const;
+	uint32_t ToRGBA() const;
+
 	float x;
 	float y;
 	float z;

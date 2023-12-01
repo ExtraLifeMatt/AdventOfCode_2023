@@ -9,8 +9,6 @@
 #include <cassert>
 #include <type_traits>
 
-#define ACLOG(x, ...)  AdventGUIConsole::Get().Log(x, __VA_ARGS__);
-
 enum class AdventGUIOptions
 {
 	AGO_None = 0,						   // Nothing special
@@ -43,6 +41,20 @@ struct AdventGUIParams
 	const char* inputFilename = nullptr;
 	Vec4 clearColor = Vec4(0.45f, 0.55f, 0.60f, 1.00f); // Backbuffer Clear color
 };
+
+namespace AdventGUIColor
+{
+	extern const Vec4 Black;
+	extern const Vec4 White;
+	extern const Vec4 Red;
+	extern const Vec4 Blue;
+	extern const Vec4 Green;
+	extern const Vec4 Yellow;
+	extern const Vec4 Orange;
+	extern const Vec4 Purple;
+}
+
+#define ACLOG(x, ...)  AdventGUIInstance::Get().Log(AdventGUIColor::Black, x, __VA_ARGS__);
 
 class AdventGUIInstance
 {
@@ -96,6 +108,17 @@ public:
 
 	void RequestExit(bool exit);
 	void OnKeyAction(struct GLFWwindow* window, int key, int scancode, int action, int mods);
+
+	void Log(const Vec4 color, const char* fmt, ...)
+	{
+		char appendedLog[1024] = { 0 };
+		va_list args;
+		va_start(args, fmt);
+		vsprintf_s(appendedLog, 1024, fmt, args);
+		va_end(args);
+
+		AdventGUIConsole::Get().Log("[%8f]<color>%u</color>%s", m_appLifetime, color.ToRGBA(), appendedLog);
+	}
 protected:
 	AdventGUIInstance(const AdventGUIParams& params);
 
@@ -117,4 +140,6 @@ private:
 	AdventGUIParams m_params;
 	struct GLFWwindow* m_appWindow;
 	AdventGUIContext m_context;
+	double m_appLifetime;
+	double m_lastTimeStamp;
 };

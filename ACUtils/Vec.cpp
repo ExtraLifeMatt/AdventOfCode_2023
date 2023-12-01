@@ -572,3 +572,20 @@ float Vec4::Distance(const Vec4& Dest) const
 {
 	return sqrtf(DistanceSquared(Dest));
 }
+
+Vec4 Vec4::Normalized() const
+{
+	float length = Length();
+	return Vec4(x / length, y / length, z / length, w / length);
+}
+
+uint32_t Vec4::ToRGBA() const
+{
+	Vec4 normalized = Normalized();
+	uint32_t r = (uint32_t)(normalized.x * 255.0f);
+	uint32_t g = (uint32_t)(normalized.y * 255.0f);
+	uint32_t b = (uint32_t)(normalized.z * 255.0f);
+	uint32_t a = (uint32_t)(normalized.w * 255.0f);
+
+	return r << 24 | g << 16 | b << 8 | a;
+}

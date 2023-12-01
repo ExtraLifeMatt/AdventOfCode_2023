@@ -10,6 +10,15 @@
 
 AdventGUIInstance* AdventGUIInstance::s_Instance = nullptr;
 
+const Vec4 AdventGUIColor::Black = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+const Vec4 AdventGUIColor::White = Vec4(1.0f, 1.0f, 1.0f, 1.0f);
+const Vec4 AdventGUIColor::Red = Vec4(1.0f, 0.0f, 0.0f, 1.0f);
+const Vec4 AdventGUIColor::Green = Vec4(0.0f, 1.0f, 0.0f, 1.0f);
+const Vec4 AdventGUIColor::Blue = Vec4(0.0f, 0.0f, 1.0f, 1.0f);
+const Vec4 AdventGUIColor::Yellow = Vec4(0.0f, 1.0f, 1.0f, 1.0f);
+const Vec4 AdventGUIColor::Orange = Vec4(1.0f, 0.0f, 1.0f, 1.0f);
+const Vec4 AdventGUIColor::Purple = Vec4(1.0f, 1.0f, 0.0f, 1.0f);
+
 static void glfw_error_callback(int error, const char* errorDescription)
 {
 	fprintf(stderr, "GLFW Error (%d): %s\n", error, errorDescription);
@@ -42,7 +51,9 @@ void AdventGUIInstance::OnKeyAction(struct GLFWwindow* window, int key, int scan
 }
 
 AdventGUIInstance::AdventGUIInstance(const AdventGUIParams& params)
-: m_params(params)
+: m_params(params),
+m_appLifetime(0.0),
+m_lastTimeStamp(0.0)
 {
 	InternalCreate();
 }
@@ -140,8 +151,6 @@ void AdventGUIInstance::InternalDestroy()
 void AdventGUIInstance::PollEvents()
 {
 	glfwPollEvents();
-
-
 }
 
 void AdventGUIInstance::BeginFrame()
@@ -162,8 +171,9 @@ void AdventGUIInstance::BeginFrame()
 
 void AdventGUIInstance::DoFrame()
 {
+	m_appLifetime = glfwGetTime();
 	AdventGUIContext context;
-	context.deltaTime = glfwGetTime();
+	context.deltaTime = m_appLifetime - m_lastTimeStamp;
 	
 	if (HasExecFlags(AdventExecuteFlags::AEF_PartOne))
 	{
@@ -174,6 +184,8 @@ void AdventGUIInstance::DoFrame()
 	{
 		PartTwo(context);
 	}
+
+	m_lastTimeStamp = m_appLifetime;
 }
 
 void AdventGUIInstance::PartOne(const AdventGUIContext& context)
@@ -215,4 +227,5 @@ bool AdventGUIInstance::ShouldExit()
 
 	return true;
 }
+
 
