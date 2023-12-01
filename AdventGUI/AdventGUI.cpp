@@ -123,12 +123,6 @@ void AdventGUIInstance::InternalCreate()
 	}
 
 	console.Log("AdventGUI Initialized.");
-
-	if (m_params.inputFilename != nullptr)
-	{
-		FileStreamReader inputFile(m_params.inputFilename);
-		ParseInput(inputFile);
-	}
 }
 
 void AdventGUIInstance::InternalDestroy()
@@ -197,7 +191,7 @@ void AdventGUIInstance::PartOne(const AdventGUIContext& context)
 void AdventGUIInstance::PartTwo(const AdventGUIContext& context)
 {
 	// Request exit
-	RequestExit(true);
+	SetExecFlags(AdventExecuteFlags::AEF_None);
 }
 
 void AdventGUIInstance::EndFrame()

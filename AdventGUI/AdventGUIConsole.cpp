@@ -153,7 +153,11 @@ void AdventGUIConsole::Draw()
 		{
 			for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i)
 			{
-				ImGui::TextUnformatted(reinterpret_cast<char*>(m_Allocator.GetBaseOffset()) + m_LogEntries[i]);
+				const char* logLine = reinterpret_cast<char*>(m_Allocator.GetBaseOffset()) + m_LogEntries[i];
+				
+				// Future parsing code to pull style tokens...
+
+				ImGui::TextUnformatted(logLine);
 			}
 		}
 

@@ -54,7 +54,7 @@ namespace AdventGUIColor
 	extern const Vec4 Purple;
 }
 
-#define ACLOG(x, ...)  AdventGUIInstance::Get().Log(AdventGUIColor::Black, x, __VA_ARGS__);
+#define ACLOG(x, ...)  AdventGUIInstance::Get().Log(x, __VA_ARGS__);
 
 class AdventGUIInstance
 {
@@ -71,6 +71,12 @@ public:
 		T* newInstance = new T(params, std::forward(args)...);
 		
 		s_Instance = newInstance->As<AdventGUIInstance>();
+
+		if (s_Instance->GetInputFileName())
+		{
+			FileStreamReader inputFile(s_Instance->GetInputFileName());
+			s_Instance->ParseInput(inputFile);
+		}
 
 		// Begin exec loop
 		while (!s_Instance->ShouldExit())
@@ -109,7 +115,7 @@ public:
 	void RequestExit(bool exit);
 	void OnKeyAction(struct GLFWwindow* window, int key, int scancode, int action, int mods);
 
-	void Log(const Vec4 color, const char* fmt, ...)
+	void Log(const char* fmt, ...)
 	{
 		char appendedLog[1024] = { 0 };
 		va_list args;
@@ -117,8 +123,10 @@ public:
 		vsprintf_s(appendedLog, 1024, fmt, args);
 		va_end(args);
 
-		AdventGUIConsole::Get().Log("[%8f]<color>%u</color>%s", m_appLifetime, color.ToRGBA(), appendedLog);
+		AdventGUIConsole::Get().Log("[%8f] %s", m_appLifetime, appendedLog);
 	}
+
+	const char* GetInputFileName() const { return m_params.inputFilename; }
 protected:
 	AdventGUIInstance(const AdventGUIParams& params);
 

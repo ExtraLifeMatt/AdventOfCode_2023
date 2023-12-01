@@ -41,7 +41,7 @@ public:
 		memcpy(logCopy, printBuffer, totalChars + 1);
 
 		// Echo to stdout
-		printf_s("%s", printBuffer);
+		printf_s("%s\n", printBuffer);
 	};
 
 	void RegisterCommand(const char* command, GUIConsoleCommandCB callback);
