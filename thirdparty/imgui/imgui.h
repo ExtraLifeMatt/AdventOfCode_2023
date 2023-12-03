@@ -2562,8 +2562,8 @@ struct ImTextCustomization
         item.UnderlineColor = col;
         return *this;
     }
-    // The last range specified will be striked through
-    ImTextCustomization& Strkethrough(ImColor col = 0)
+    // The last range specified will be strike through
+    ImTextCustomization& Strikethrough(ImColor col = 0)
     {
         _RangeItem& item = _Ranges.back();
         item.Flag |= _RangeItem::FLAG::STRIKETHROUGH;

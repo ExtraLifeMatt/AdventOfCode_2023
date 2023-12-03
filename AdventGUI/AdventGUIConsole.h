@@ -52,6 +52,17 @@ public:
 	void Draw();
 	void ClearLog();
 private:
+	struct FormatToken
+	{
+		static constexpr uint32_t MAX_TOKEN_LENGTH=32;
+		static constexpr uint32_t MAX_ATTRIBUTES = 8;
+		char Name[MAX_TOKEN_LENGTH];
+		char Attributes[MAX_ATTRIBUTES][MAX_TOKEN_LENGTH];
+		char Values[MAX_ATTRIBUTES][MAX_TOKEN_LENGTH];
+	};
+
+	bool ParseFormatTokens(const char* str, std::vector<FormatToken>& outTokens) const;
+	const char* GetNextToken(const char* str, char* outBuffer, size_t outBufferSize) const;
 	AdventGUIConsole();
 	~AdventGUIConsole();
 	

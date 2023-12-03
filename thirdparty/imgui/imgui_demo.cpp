@@ -1030,11 +1030,11 @@ static void ShowDemoWindowWidgets()
 
         ImGui::NewLine();
         ImGui::Text("Strikethrough");
-        ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text).Strkethrough());
+        ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text).Strikethrough());
 
         ImGui::NewLine();
         ImGui::Text("Strikethrough with color");
-        ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text).Strkethrough(red));
+        ImGui::TextUnformatted(text, NULL, true, false, &tc.Clear().Range(text).Strikethrough(red));
 
         ImGui::NewLine();
         ImGui::Text("Hilight the text with brown");
@@ -1210,8 +1210,8 @@ static void ShowDemoWindowWidgets()
         // strikethrough range
         if (c.strikethrough)
         {
-            style.Range(text + c.st_1_pos_begin, text + c.st_1_pos_end).Strkethrough(c.st_col_1);
-            style.Range(text + c.st_2_pos_begin, text + c.st_2_pos_end).Strkethrough(c.st_col_2);
+            style.Range(text + c.st_1_pos_begin, text + c.st_1_pos_end).Strikethrough(c.st_col_1);
+            style.Range(text + c.st_2_pos_begin, text + c.st_2_pos_end).Strikethrough(c.st_col_2);
         }
         // mask range
         if (c.textmask)
