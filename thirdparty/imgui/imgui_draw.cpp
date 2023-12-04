@@ -3692,7 +3692,20 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     const char* word_wrap_eol = NULL;
 
     ImU32 text_col = col;
+#define IMGUI_TEXT_CUSTOMIZATION_WIP 0
+#if IMGUI_TEXT_CUSTOMIZATION_WIP
+    struct TagCustomizationData
+    {
+        TagCustomizationData(ImGuiID _id, const ImTextCustomizationTag& _tagData, void* _userData):id(_id), tagData(&_tagData), userData(_userData) {}
+        ImGuiID id;
+        const ImTextCustomizationTag* tagData;
+        void* userData;
+    };
 
+    ImVector<TagCustomizationData> customizationStack;
+    ImVector<const TagCustomizationData*> customizationRenderOrder;
+    const ImGuiContext* context = ImGui::GetCurrentContext();
+#endif
     struct _CustomizationParser
     {
         // customization for the text
@@ -3988,13 +4001,155 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
                 continue;
         }
 
+#if IMGUI_TEXT_CUSTOMIZATION_WIP // WIP
+        /// Customization Parse Start
+        if (*s == '<')
+        {
+            const char* posOnFail = s;
+            const char* customTagNameStart = NULL;
+            const char* customTagNameEnd = NULL;
+            const char* customTagParamStart = NULL;
+            const char* customTagParamEnd = NULL;
+            bool isClosingTag = false;
+            bool rebuildRenderOrder = false;
+
+            ++s;
+            while (true)
+            {
+                if (s == text_end)
+                {
+                    // Malformed node.
+                    s = posOnFail;
+                    break;
+                }
+
+                if (customTagNameStart == NULL) // Find out name start.
+                {
+                    if (*s == ' ')
+                    {
+                        ++s;
+                    }
+                    else if (*s == '/')
+                    {
+                        isClosingTag = true;
+                        ++s;
+                    }
+                    else
+                    {
+                        customTagNameStart = s;
+                        ++s;
+                    }
+                }
+                else if (customTagNameEnd == NULL) // Find our name end.
+                {
+                    if (*s != ' ' && *s != '>')
+                    {
+                        ++s;
+                    }
+                    else
+                    {
+                        customTagNameEnd = s - 1;
+                        if (*s == ' ')
+                        {
+                            ++s;
+                            customTagParamStart = s;
+                        }
+                        else
+                        {
+                            ++s;
+                            break;
+                        }
+                    }
+                }
+                else if (customTagParamEnd == NULL)
+                {
+                    if (*s != '>')
+                    {
+                        ++s;
+                    }
+                    else
+                    {
+                        customTagParamEnd = s;
+                        break;
+                    }
+                }
+
+            }
+
+            ImGuiID nameId = ImGui::GetID(customTagNameStart, customTagNameEnd);
+
+            if (isClosingTag)
+            {
+                IM_ASSERT_USER_ERROR(customizationStack.size() != 0, "Closing tag was found but there is nothing on the stack. Empty tags '<Tag/>' are not allowed.");
+
+                // We walk backwards so if you have nested of the same time, the latest one gets popped first.
+                for (size_t removeTagIdx = customizationStack.size(); removeTagIdx != 0; --removeTagIdx)
+                {
+                    if (customizationStack[removeTagIdx - 1].id == nameId)
+                    {
+                        customizationStack.erase(&customizationStack[removeTagIdx -1]);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                const ImTextCustomizationTag* customization = context->TextCustomization.GetCustomizationByID(nameId);
+                void* userData = NULL;
+                if (customization->Parser && customTagParamStart)
+                {
+                    (*customization->Parser)(nameId, customTagParamStart, customTagParamEnd, &userData);
+                }
+                customizationStack.push_back(TagCustomizationData(nameId, *customization, userData));
+            }
+
+            // Rebuild render order
+            customizationRenderOrder.clear();
+            customizationRenderOrder.reserve(customizationStack.size());
+            for (const TagCustomizationData& data : customizationStack)
+            {
+                if (customizationRenderOrder.size() == 0)
+                {
+                    customizationRenderOrder.push_back(&data);
+                }
+                else
+                {
+                   // Just insertion sort these, we don't expect a ton of tags active at once. Could quicksort if needed.
+                    for (size_t insertIndex = 0; insertIndex <= customizationRenderOrder.size(); ++insertIndex)
+                    {
+                        if (insertIndex == customizationRenderOrder.size())
+                        {
+                            customizationRenderOrder.push_back(&data);
+                        }
+                        else if (data.tagData->Priority < customizationRenderOrder[insertIndex]->tagData->Priority)
+                        {
+                            customizationRenderOrder.insert(customizationRenderOrder.Data + insertIndex, &data);
+                            break;
+                        }
+                   }
+                }
+            }     
+        }
+        /// Customization Parse End
+#endif
         if (customization)
             col = parser.OnNewGlyph(glyph_pos, s, c, x, y);
 
         const ImFontGlyph* glyph = FindGlyph((ImWchar)c);
         if (glyph == NULL)
             continue;
-
+#if IMGUI_TEXT_CUSTOMIZATION_WIP
+        /// Customization Parse Start
+        if (customizationRenderOrder.size() != 0)
+        {
+            for (const TagCustomizationData* activeTags : customizationRenderOrder)
+            {
+                ImGuiTextCustomizationRenderCallback callback = activeTags->tagData->Renderer;
+                (*callback)(activeTags->id, glyph, x, y, draw_list_text,activeTags->userData);
+            }
+        }
+        /// Customization Parse End
+#endif
         float char_width = glyph->AdvanceX * scale;
         if (glyph->Visible)
         {

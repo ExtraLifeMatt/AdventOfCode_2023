@@ -3249,6 +3249,24 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     return "Unknown";
 }
 
+void ImTextCustomization::RegisterCustomization(const char* name, ImGuiTextCustomizationParser parser, ImGuiTextCustomizationRenderCallback renderer, int priority)
+{
+    IM_ASSERT_USER_ERROR(GetCustomizationByID(ImGui::GetID(name)) == NULL, "This customization has already been registered.");
+    RegisteredCustomizations.push_back(ImTextCustomizationTag(name, parser, renderer, priority));
+}
+
+const ImTextCustomizationTag* ImTextCustomization::GetCustomizationByID(ImGuiID id) const
+{
+    for(const ImTextCustomizationTag& registeredTag : RegisteredCustomizations)
+    {
+        if (registeredTag.Id == id)
+        {
+            return &registeredTag;
+        }
+    }
+
+    return nullptr;
+}
 
 //-----------------------------------------------------------------------------
 // [SECTION] RENDER HELPERS
@@ -14982,3 +15000,5 @@ void ImGui::UpdateDebugToolStackQueries() {}
 //-----------------------------------------------------------------------------
 
 #endif // #ifndef IMGUI_DISABLE
+
+

@@ -133,7 +133,7 @@ private:
 int main()
 {
 	AdventGUIParams newParams;
-	newParams.day = 0;
+	newParams.day = 2;
 	newParams.year = 2023;
 	newParams.puzzleTitle = "Cube Conundrum";
 	newParams.inputFilename = "input.txt";

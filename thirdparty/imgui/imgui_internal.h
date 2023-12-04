@@ -1769,6 +1769,8 @@ struct ImGuiContextHook
     ImGuiContextHook()          { memset(this, 0, sizeof(*this)); }
 };
 
+
+
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiContext (main Dear ImGui context)
 //-----------------------------------------------------------------------------
@@ -2071,6 +2073,9 @@ struct ImGuiContext
     int                     WantCaptureKeyboardNextFrame;       // "
     int                     WantTextInputNextFrame;
     ImVector<char>          TempBuffer;                         // Temporary text buffer
+
+    // Text Customization
+    ImTextCustomization     TextCustomization;
 
     ImGuiContext(ImFontAtlas* shared_font_atlas)
     {

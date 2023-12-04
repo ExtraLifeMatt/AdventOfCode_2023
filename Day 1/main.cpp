@@ -124,7 +124,7 @@ private:
 int main()
 {
 	AdventGUIParams newParams;
-	newParams.day = 0;
+	newParams.day = 1;
 	newParams.year = 2023;
 	newParams.puzzleTitle = "Trebuchet?!";
 	newParams.inputFilename = "input.txt";

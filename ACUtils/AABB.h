@@ -171,7 +171,7 @@ public:
 
 	const IntVec2& GetMin() const { return Min; }
 	const IntVec2& GetMax() const { return Max; }
-	IntVec2 GetCenter() const { return (Max - Min) / 2; }
+	IntVec2 GetCenter() const { return Min + (Max - Min) / 2; }
 	IntVec2 GetSize() const { return Max - Min; }
 
 	bool Contains(const IntVec2& Pos) const

@@ -2490,10 +2490,29 @@ struct ImColor
 //-----------------------------------------------------------------------------
 // [SECTION] ImTextCustomStyle  definition
 //-----------------------------------------------------------------------------
-// Support text customization like text color, text background, croosline and underline
+// Support text customization like text color, text background, crossline and underline
+typedef void (*ImGuiTextCustomizationParser)(ImGuiID nodeId, const char* paramStart, const char* paramEnd, void** userData);
+typedef void (*ImGuiTextCustomizationRenderCallback)(ImGuiID nodeId, const ImFontGlyph* glyph, float x, float y, ImDrawList* drawList, const void* userData);
+
+struct ImTextCustomizationTag
+{
+    ImTextCustomizationTag(const char* name, ImGuiTextCustomizationParser parser, ImGuiTextCustomizationRenderCallback renderer, int priority = 0) : Id(ImGui::GetID(name)), Parser(parser), Renderer(renderer), Priority(priority) {}
+
+    ImGuiID Id;
+    ImGuiTextCustomizationParser Parser;
+    ImGuiTextCustomizationRenderCallback Renderer;
+    int Priority;
+};
 
 struct ImTextCustomization
 {
+
+    ImVector<ImTextCustomizationTag> RegisteredCustomizations;
+
+    void RegisterCustomization(const char* name, ImGuiTextCustomizationParser parser, ImGuiTextCustomizationRenderCallback renderer, int priority);
+    const ImTextCustomizationTag* GetCustomizationByID(ImGuiID id) const;
+    void ClearCustomizations() { RegisteredCustomizations.clear(); }
+
     struct _RangeItem
     {
         const char* PosStart, * PosStop;
