@@ -459,6 +459,11 @@ Vec4::Vec4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w)
 
 }
 
+Vec4::Vec4(const Vec3& vec): x(vec.x), y(vec.y), z(vec.z), w(0.0f)
+{
+
+}
+
 bool Vec4::IsZero() const
 {
 	return x == 0.0f && y == 0.0f && z == 0.0f && w == 0.0f;

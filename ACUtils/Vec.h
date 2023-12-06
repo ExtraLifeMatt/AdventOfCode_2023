@@ -107,6 +107,7 @@ public:
 	Vec4(float xyzw);
 	Vec4(float _x, float _y, float _z, float _w);
 	Vec4(const __m128& _vec);
+	Vec4(const Vec3& vec);
 
 	static const Vec4 UnitX;
 	static const Vec4 UnitY;
