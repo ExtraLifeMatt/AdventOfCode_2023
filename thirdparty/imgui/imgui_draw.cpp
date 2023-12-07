@@ -3609,6 +3609,65 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     draw_list->PrimRectUV(ImVec2(x + glyph->X0 * scale, y + glyph->Y0 * scale), ImVec2(x + glyph->X1 * scale, y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
 }
 
+static void ColorTagParse(ImGuiID nodeId, const char* paramStart, const char* paramEnd, void** userData)
+{
+    
+}
+
+static void ColorTagDrawer(ImGuiID nodeId, const ImFontGlyph* glyph, float x, float y, ImDrawList* drawList, const void* userData)
+{
+
+}
+
+static void HighlightTagParse(ImGuiID nodeId, const char* paramStart, const char* paramEnd, void** userData)
+{
+
+}
+
+static void HighlightTagDrawer(ImGuiID nodeId, const ImFontGlyph* glyph, float x, float y, ImDrawList* drawList, const void* userData)
+{
+
+}
+
+static void UnderlineTagParse(ImGuiID nodeId, const char* paramStart, const char* paramEnd, void** userData)
+{
+
+}
+
+static void UnderlineTagDrawer(ImGuiID nodeId, const ImFontGlyph* glyph, float x, float y, ImDrawList* drawList, const void* userData)
+{
+
+}
+
+static void StrikethroughTagParse(ImGuiID nodeId, const char* paramStart, const char* paramEnd, void** userData)
+{
+
+}
+
+static void StrikethroughTagDrawer(ImGuiID nodeId, const ImFontGlyph* glyph, float x, float y, ImDrawList* drawList, const void* userData)
+{
+
+}
+
+static void HiddenTagParse(ImGuiID nodeId, const char* paramStart, const char* paramEnd, void** userData)
+{
+
+}
+
+static void HiddenTagDrawer(ImGuiID nodeId, const ImFontGlyph* glyph, float x, float y, ImDrawList* drawList, const void* userData)
+{
+
+}
+
+void ImTextCustomization::RegisterCommonCustomizations()
+{
+    RegisterCustomization("Color", ColorTagParse, ColorTagDrawer, 0);
+    RegisterCustomization("Highlight", HighlightTagParse, HighlightTagDrawer, -1); // Highlight draws first "behind" the text.
+    RegisterCustomization("Underline", UnderlineTagParse, UnderlineTagDrawer, 0);
+    RegisterCustomization("Strikethrough", StrikethroughTagParse, StrikethroughTagDrawer, 1);
+    RegisterCustomization("Hidden", HiddenTagParse, HiddenTagDrawer, 2); // Hidden goes last as it draws OVER the text.
+}
+
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
 void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, const ImTextCustomization* customization ) const
 {

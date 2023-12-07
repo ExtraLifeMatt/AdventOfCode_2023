@@ -2509,6 +2509,7 @@ struct ImTextCustomization
 
     ImVector<ImTextCustomizationTag> RegisteredCustomizations;
 
+    void RegisterCommonCustomizations(); // Color, Highlight, Strikethrough, Underline, Hidden
     void RegisterCustomization(const char* name, ImGuiTextCustomizationParser parser, ImGuiTextCustomizationRenderCallback renderer, int priority);
     const ImTextCustomizationTag* GetCustomizationByID(ImGuiID id) const;
     void ClearCustomizations() { RegisteredCustomizations.clear(); }
@@ -2546,7 +2547,7 @@ struct ImTextCustomization
         return *this;
     }
 
-    // Sepcify a range of the text first 
+    // Specify a range of the text first 
     ImTextCustomization& Range(const char* begin, const char* end = NULL)
     {
         // add valid range to list. ignore invalid range

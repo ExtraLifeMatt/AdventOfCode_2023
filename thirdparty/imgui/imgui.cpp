@@ -3249,6 +3249,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     return "Unknown";
 }
 
+
 void ImTextCustomization::RegisterCustomization(const char* name, ImGuiTextCustomizationParser parser, ImGuiTextCustomizationRenderCallback renderer, int priority)
 {
     IM_ASSERT_USER_ERROR(GetCustomizationByID(ImGui::GetID(name)) == NULL, "This customization has already been registered.");
