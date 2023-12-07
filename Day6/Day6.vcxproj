@@ -143,7 +143,10 @@
     <ClCompile Include="..\ACUtils\Debug.cpp" />
     <ClCompile Include="..\ACUtils\IntVec.cpp" />
     <ClCompile Include="..\ACUtils\Math.cpp" />
+    <ClCompile Include="..\ACUtils\Matrix.cpp" />
+    <ClCompile Include="..\ACUtils\Quat.cpp" />
     <ClCompile Include="..\ACUtils\StringUtil.cpp" />
+    <ClCompile Include="..\ACUtils\Transform.cpp" />
     <ClCompile Include="..\ACUtils\Vec.cpp" />
     <ClCompile Include="..\AdventGUI\AdventGUI.cpp" />
     <ClCompile Include="..\AdventGUI\AdventGUIConsole.cpp" />
@@ -169,8 +172,11 @@
     <ClInclude Include="..\ACUtils\IncludeAll.h" />
     <ClInclude Include="..\ACUtils\IntVec.h" />
     <ClInclude Include="..\ACUtils\Math.h" />
+    <ClInclude Include="..\ACUtils\Matrix.h" />
     <ClInclude Include="..\ACUtils\Memory.h" />
+    <ClInclude Include="..\ACUtils\Quat.h" />
     <ClInclude Include="..\ACUtils\StringUtil.h" />
+    <ClInclude Include="..\ACUtils\Transform.h" />
     <ClInclude Include="..\ACUtils\Vec.h" />
     <ClInclude Include="..\AdventGUI\AdventGUI.h" />
     <ClInclude Include="..\AdventGUI\AdventGUIConsole.h" />

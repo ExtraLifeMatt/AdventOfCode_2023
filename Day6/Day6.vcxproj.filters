@@ -78,6 +78,15 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\ACUtils\Matrix.cpp">
+      <Filter>ACUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ACUtils\Quat.cpp">
+      <Filter>ACUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ACUtils\Transform.cpp">
+      <Filter>ACUtils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\ACUtils\AABB.h">
@@ -163,6 +172,15 @@
     </ClInclude>
     <ClInclude Include="..\thirdparty\glfw\include\GLFW\glfw3native.h">
       <Filter>thirdparty\glfw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Matrix.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Quat.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Transform.h">
+      <Filter>ACUtils</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
