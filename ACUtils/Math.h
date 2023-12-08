@@ -53,8 +53,11 @@ namespace Math
 		return pow == 0 ? 1 : base * Pow(base, pow - 1);
 	}
 
-	int32_t EstimatePrimeNumbersInRange(int32_t UpperLimit);
+	uint64_t LCM(uint64_t a, uint64_t b);
+	uint64_t GCD(uint64_t a, uint64_t b);
 
+	int32_t EstimatePrimeNumbersInRange(int32_t UpperLimit);
+	void PrimeFactorization32(uint32_t value, std::vector<uint32_t>& outFactors);
 	bool IsPrime(uint32_t WholeNumber);
 
 	// Finds all the primes
