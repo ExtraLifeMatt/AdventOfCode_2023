@@ -35,6 +35,8 @@ private:
 				newTree->m_Values.push_back(StringUtil::AtoiI64(token.c_str()));
 			}
 
+			SolveTree(newTree);
+
 			m_Trees.push_back(newTree);
 		}
 	}
@@ -123,10 +125,6 @@ private:
 		int64_t sum = 0;
 		for (NumberTree* tree : m_Trees)
 		{
-			SolveTree(tree);
-			
-			//PrintTree(tree);
-
 			sum += GetExtrapolatedSum(tree);
 		}
 
@@ -142,10 +140,6 @@ private:
 		int64_t sum = 0;
 		for (NumberTree* tree : m_Trees)
 		{
-			SolveTree(tree);
-
-			//PrintTree(tree);
-
 			sum += GetReverseExtrapolatedSum(tree);
 		}
 

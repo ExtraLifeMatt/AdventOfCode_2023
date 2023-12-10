@@ -6,6 +6,8 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 
+#include "ACUtils/Debug.h"
+
 #include "AdventGUIConsole.h"
 
 AdventGUIInstance* AdventGUIInstance::s_Instance = nullptr;
@@ -22,6 +24,16 @@ const Vec4 AdventGUIColor::Purple = Vec4(1.0f, 1.0f, 0.0f, 1.0f);
 static void glfw_error_callback(int error, const char* errorDescription)
 {
 	fprintf(stderr, "GLFW Error (%d): %s\n", error, errorDescription);
+}
+
+static void* ImGuiFrameAlloc(size_t size, void* /*userData*/)
+{
+	return AdventGUIInstance::Get()->GetImGuiFrameAllocator().Alloc(size);
+}
+
+static void ImGuiFrameFree(void* /*ptr*/, void* /*userData*/)
+{
+	// No need.
 }
 
 void AdventGUIInstance::RequestExit(bool exit)
@@ -52,6 +64,7 @@ void AdventGUIInstance::OnKeyAction(struct GLFWwindow* window, int key, int scan
 
 AdventGUIInstance::AdventGUIInstance(const AdventGUIParams& params)
 : m_params(params),
+m_imguiFrameAllocator(1 * 1024 * 1024),
 m_appLifetime(0.0),
 m_lastTimeStamp(0.0)
 {
@@ -109,6 +122,8 @@ void AdventGUIInstance::InternalCreate()
 	ioSys.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 	ioSys.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
+	ImGui::SetFrameAllocatorFunctions(ImGuiFrameAlloc, ImGuiFrameFree);
+
 	ImGui::StyleColorsDark();
 
 	ImGui_ImplGlfw_InitForOpenGL(m_appWindow, true);
@@ -149,6 +164,8 @@ void AdventGUIInstance::PollEvents()
 
 void AdventGUIInstance::BeginFrame()
 {
+	m_imguiFrameAllocator.Reset();
+
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 

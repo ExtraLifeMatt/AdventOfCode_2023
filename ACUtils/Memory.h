@@ -61,6 +61,8 @@ namespace Memory
 		}
 
 		uintptr_t GetBaseOffset() const { return (uintptr_t)m_memory; }
+
+		void Reset() { m_offset.store(0, std::memory_order_release); }
 	private:
 		char* m_memory;
 		size_t m_totalSize;

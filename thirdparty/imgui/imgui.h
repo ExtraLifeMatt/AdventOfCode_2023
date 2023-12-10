@@ -488,7 +488,7 @@ namespace ImGui
     IMGUI_API ImGuiID       GetID(const void* ptr_id);
 
     // Widgets: Text
-    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL, bool wrapped = false, bool disabled = false, const ImTextCustomization* customization = NULL); // raw text without formatting. Roughly equivalent to Text("%s", text) but: A) doesn't require null terminated string if 'text_end' is specified, B) it's faster, no memory copy is done, no buffer size limits, recommended for long chunks of text.
+    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL); // raw text without formatting. Roughly equivalent to Text("%s", text) but: A) doesn't require null terminated string if 'text_end' is specified, B) it's faster, no memory copy is done, no buffer size limits, recommended for long chunks of text.
     IMGUI_API void          Text(const char* fmt, ...)                                      IM_FMTARGS(1); // formatted text
     IMGUI_API void          TextV(const char* fmt, va_list args)                            IM_FMTLIST(1);
     IMGUI_API void          TextColored(const ImVec4& col, const char* fmt, ...)            IM_FMTARGS(2); // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
@@ -962,6 +962,12 @@ namespace ImGui
     IMGUI_API void          GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeFunc* p_free_func, void** p_user_data);
     IMGUI_API void*         MemAlloc(size_t size);
     IMGUI_API void          MemFree(void* ptr);
+
+    // Temporary Frame Memory Allocators. By default these will fallback to the normal allocators, but they are ideal for ring buffers.
+    // Any memory allocated with this function is assumed to only be valid till the next call of ImGui::NewFrame. So don't store any pointers for more than a frame.
+    IMGUI_API void          SetFrameAllocatorFunctions(ImGuiMemAllocFunc frame_alloc_func, ImGuiMemFreeFunc frame_free_func);
+    IMGUI_API void*         FrameMemAlloc(size_t size);
+    IMGUI_API void          FrameMemFree(void* ptr);
 
 } // namespace ImGui
 
@@ -2504,173 +2510,36 @@ struct ImTextCustomizationTag
     int Priority;
 };
 
+struct ImTextParsedTag
+{
+    ImGuiID tagId;
+    const char* tagNameStart = nullptr;
+    const char* tagNameEnd = nullptr;
+    const char* attributeStart = nullptr;
+    const char* attributeEnd = nullptr;
+    const char* rangeStart = nullptr;
+    const char* rangeEnd = nullptr;
+    const ImTextCustomizationTag* tagCustomization = nullptr;
+    void* userData = nullptr;
+};
+
 struct ImTextCustomization
 {
-
     ImVector<ImTextCustomizationTag> RegisteredCustomizations;
+
+    static bool ParseIntValue(const char* strStart, const char* strEnd, const char* paramName, int& outValue); // Supports Hex
+    static bool ParseFloatValue(const char* strStart, const char* strEnd, const char* paramName, float& outValue);
+    static bool ParseStringValue(const char* strStart, const char* strEnd, const char* paramName, const char* strValueStart, const char* strValueEnd);
+    static bool ParseBoolValue(const char* strStart, const char* strEnd, const char* paramName, bool& outValue); // Supports 0, 1, True, False
 
     void RegisterCommonCustomizations(); // Color, Highlight, Strikethrough, Underline, Hidden
     void RegisterCustomization(const char* name, ImGuiTextCustomizationParser parser, ImGuiTextCustomizationRenderCallback renderer, int priority);
     const ImTextCustomizationTag* GetCustomizationByID(ImGuiID id) const;
     void ClearCustomizations() { RegisteredCustomizations.clear(); }
 
-    struct _RangeItem
-    {
-        const char* PosStart, * PosStop;
-        ImColor     TextColor, HighlightColor, UnderlineColor, StrikethroughColor, MaskColor;
-        unsigned Flag;
-
-        enum FLAG
-        {
-            TEXTCOLOR = 1,
-            HIGHLIGHT = 1 << 1,
-            UNDERLINE = 1 << 2,
-            STRIKETHROUGH = 1 << 3,
-            MASK = 1 << 4,
-            DISABLED = 1 << 5
-        };
-
-        // A zero color value will be ignored
-        _RangeItem() { PosStart = NULL; PosStop = NULL; TextColor = 0; HighlightColor = 0; UnderlineColor = 0; StrikethroughColor = 0; Flag = 0; }
-        _RangeItem(const char* pos_start, const char* pos_stop) : _RangeItem()
-        {
-            PosStart = pos_start; PosStop = pos_stop;
-        }
-    };
-
-    ImVector<_RangeItem> _Ranges;
-
-    // Reset all customizations by empty _Ranges
-    ImTextCustomization& Clear()
-    {
-        _Ranges.clear();
-        return *this;
-    }
-
-    // Specify a range of the text first 
-    ImTextCustomization& Range(const char* begin, const char* end = NULL)
-    {
-        // add valid range to list. ignore invalid range
-        if (begin != NULL && end >= begin)
-            _Ranges.push_back(_RangeItem(begin, end));
-        else if (begin != NULL && end == NULL)
-            _Ranges.push_back(_RangeItem(begin, begin + strlen(begin)));
-
-        return *this;
-    }
-    // The last range specified will be colored
-    ImTextCustomization& TextColor(ImColor col)
-    {
-        _RangeItem& item = _Ranges.back();
-        item.Flag |= _RangeItem::FLAG::TEXTCOLOR;
-        item.TextColor = col;
-        return *this;
-    }
-    // The last range specified will be highlighted 
-    ImTextCustomization& Highlight(ImColor col)
-    {
-        _RangeItem& item = _Ranges.back();
-        item.Flag |= _RangeItem::FLAG::HIGHLIGHT;
-        item.HighlightColor = col;
-        return *this;
-    }
-    // The last range specified will be underlined
-    ImTextCustomization& Underline(ImColor col = 0)
-    {
-        _RangeItem& item = _Ranges.back();
-        item.Flag |= _RangeItem::FLAG::UNDERLINE;
-        item.UnderlineColor = col;
-        return *this;
-    }
-    // The last range specified will be strike through
-    ImTextCustomization& Strikethrough(ImColor col = 0)
-    {
-        _RangeItem& item = _Ranges.back();
-        item.Flag |= _RangeItem::FLAG::STRIKETHROUGH;
-        item.StrikethroughColor = col;
-        return *this;
-    }
-    // The last range specified will be masked 
-    ImTextCustomization& Mask(ImColor col = 0)
-    {
-        _RangeItem& item = _Ranges.back();
-        item.Flag |= _RangeItem::FLAG::MASK;
-        item.MaskColor = col;
-        return *this;
-    }
-    // The last range specified will be shown as disabled
-    ImTextCustomization& Disabled(bool disabled = true)
-    {
-        _RangeItem& item = _Ranges.back();
-        if (disabled)
-            item.Flag |= _RangeItem::FLAG::DISABLED;
-        return *this;
-    }
-
-    struct Style
-    {
-        bool Text;
-        bool Disabled;
-        bool Highlight;
-        bool Underline;
-        bool Strikethrough;
-        // Mask covers the text so that it cannot be seen
-        bool Mask;
-        ImU32 TextColor;
-        ImU32 HighlightColor;
-        ImU32 UnderlineColor;
-        ImU32 StrikethroughColor;
-        ImU32 MaskColor;
-        Style()
-        {
-            memset(this, 0, sizeof(Style));
-        }
-
-    };
-
-    // Find the style for given position
-    Style GetStyleByPosition(const char* char_pos) const
-    {
-        Style s;
-
-        for (int idx = 0; idx < _Ranges.Size; idx++)
-        {
-            const _RangeItem& style_item = _Ranges[idx];
-            if (char_pos >= style_item.PosStart && char_pos < style_item.PosStop)
-            {
-                if (style_item.Flag & _RangeItem::FLAG::TEXTCOLOR)
-                {
-                    s.Text = true;
-                    s.TextColor = style_item.TextColor;
-                }
-                if (style_item.Flag & _RangeItem::FLAG::HIGHLIGHT)
-                {
-                    s.Highlight = true;
-                    s.HighlightColor = style_item.HighlightColor;
-                }
-                if (style_item.Flag & _RangeItem::FLAG::STRIKETHROUGH)
-                {
-                    s.Strikethrough = true;
-                    s.StrikethroughColor = style_item.StrikethroughColor;
-                }
-                if (style_item.Flag & _RangeItem::FLAG::UNDERLINE)
-                {
-                    s.Underline = true;
-                    s.UnderlineColor = style_item.UnderlineColor;
-                }
-                if (style_item.Flag & _RangeItem::FLAG::DISABLED)
-                {
-                    s.Disabled = true;
-                }
-                if (style_item.Flag & _RangeItem::FLAG::MASK)
-                {
-                    s.Mask = true;
-                    s.MaskColor = style_item.MaskColor;
-                }
-            }
-        }
-        return s;
-    }
+    // Used during draw to prevent creating and destroying vectors on the heap.
+    ImVector<ImTextParsedTag> parsedTagVec;
+    ImVector<const ImTextParsedTag*> parsedTagsByRenderOrder;
 };
 
 
@@ -2863,8 +2732,8 @@ struct ImDrawList
     IMGUI_API void  AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments = 0);
     IMGUI_API void  AddNgon(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness = 1.0f);
     IMGUI_API void  AddNgonFilled(const ImVec2& center, float radius, ImU32 col, int num_segments);
-    IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, const ImTextCustomization* customization = NULL);
-    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL, const ImTextCustomization* customization = NULL);
+    IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL);
+    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
     IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col);
     IMGUI_API void  AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments = 0); // Cubic Bezier (4 control points)
@@ -3201,7 +3070,7 @@ struct ImFont
     IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
     IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
     IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, ImWchar c) const;
-    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false, const ImTextCustomization* customization = NULL) const;
+    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
 
     // [Internal] Don't use!
     IMGUI_API void              BuildLookupTable();

@@ -1143,6 +1143,9 @@ static ImGuiMemAllocFunc    GImAllocatorAllocFunc = MallocWrapper;
 static ImGuiMemFreeFunc     GImAllocatorFreeFunc = FreeWrapper;
 static void*                GImAllocatorUserData = NULL;
 
+static ImGuiMemAllocFunc    GImFrameAllocatorAllocFunc = MallocWrapper;
+static ImGuiMemFreeFunc     GImFrameAllocatorFreeFunc = FreeWrapper;
+
 //-----------------------------------------------------------------------------
 // [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
 //-----------------------------------------------------------------------------
@@ -3289,7 +3292,7 @@ const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
 
 // Internal ImGui functions to render text
 // RenderText***() functions calls ImDrawList::AddText() calls ImBitmapFont::RenderText()
-void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash, const ImTextCustomization* customization)
+void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -3309,13 +3312,13 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
 
     if (text != text_display_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, NULL, customization);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, NULL);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_display_end);
     }
 }
 
-void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width, const ImTextCustomization* customization)
+void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -3325,7 +3328,7 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 
     if (text != text_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width, NULL, customization);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width, NULL);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_end);
     }
@@ -3555,6 +3558,12 @@ void ImGui::GetAllocatorFunctions(ImGuiMemAllocFunc* p_alloc_func, ImGuiMemFreeF
     *p_alloc_func = GImAllocatorAllocFunc;
     *p_free_func = GImAllocatorFreeFunc;
     *p_user_data = GImAllocatorUserData;
+}
+
+void ImGui::SetFrameAllocatorFunctions(ImGuiMemAllocFunc frame_alloc_func, ImGuiMemFreeFunc frame_free_func)
+{
+    GImFrameAllocatorAllocFunc = frame_alloc_func;
+    GImFrameAllocatorFreeFunc = frame_free_func;
 }
 
 ImGuiContext* ImGui::CreateContext(ImFontAtlas* shared_font_atlas)
@@ -4237,6 +4246,18 @@ void ImGui::MemFree(void* ptr)
         if (ImGuiContext* ctx = GImGui)
             ctx->IO.MetricsActiveAllocations--;
     return (*GImAllocatorFreeFunc)(ptr, GImAllocatorUserData);
+}
+
+void* ImGui::FrameMemAlloc(size_t size)
+{
+    // TODO: Add metrics. Likely the number of allocs and total bytes used per frame.
+    return (*GImFrameAllocatorAllocFunc)(size, GImAllocatorUserData);
+}
+
+void ImGui::FrameMemFree(void* ptr)
+{
+    // TODO: Add metrics. Likely the number of allocs and total bytes used per frame.
+    return (*GImFrameAllocatorFreeFunc)(ptr, GImAllocatorUserData);
 }
 
 const char* ImGui::GetClipboardText()

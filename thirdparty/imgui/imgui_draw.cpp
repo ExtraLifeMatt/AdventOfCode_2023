@@ -1569,7 +1569,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
     PathStroke(col, 0, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, const ImTextCustomization* customization)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1595,12 +1595,12 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, customization);
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL);
 }
 
-void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, const ImTextCustomization* customization)
+void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
 {
-    AddText(NULL, 0.0f, pos, col, text_begin, text_end, 0.0f, NULL, customization);
+    AddText(NULL, 0.0f, pos, col, text_begin, text_end, 0.0f, NULL);
 }
 
 void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
@@ -3609,9 +3609,35 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
     draw_list->PrimRectUV(ImVec2(x + glyph->X0 * scale, y + glyph->Y0 * scale), ImVec2(x + glyph->X1 * scale, y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
 }
 
+bool ImTextCustomization::ParseIntValue(const char* strStart, const char* strEnd, const char* paramName, int& outValue)
+{
+    return false;
+}
+
+bool ImTextCustomization::ParseFloatValue(const char* strStart, const char* strEnd, const char* paramName, float& outValue)
+{
+    return false;
+}
+
+bool ImTextCustomization::ParseStringValue(const char* strStart, const char* strEnd, const char* paramName, const char* strValueStart, const char* strValueEnd)
+{
+    return false;
+}
+
+bool ImTextCustomization::ParseBoolValue(const char* strStart, const char* strEnd, const char* paramName, bool& outValue)
+{
+    return false;
+}
+
 static void ColorTagParse(ImGuiID nodeId, const char* paramStart, const char* paramEnd, void** userData)
 {
-    
+    IM_ASSERT(nodeId == ImGui::GetID("Color"));
+    int colorValue = 0;
+    if (ImTextCustomization::ParseIntValue(paramStart, paramEnd, "", colorValue))
+    {
+        *userData = ImGui::FrameMemAlloc(sizeof(int));
+        *(int*)(*userData) = colorValue;
+    }
 }
 
 static void ColorTagDrawer(ImGuiID nodeId, const ImFontGlyph* glyph, float x, float y, ImDrawList* drawList, const void* userData)
@@ -3668,17 +3694,174 @@ void ImTextCustomization::RegisterCommonCustomizations()
     RegisterCustomization("Hidden", HiddenTagParse, HiddenTagDrawer, 2); // Hidden goes last as it draws OVER the text.
 }
 
+const char* ParseTextCustomizationTag(const char* tagStart, const char* strEnd, char*& outBuffer, char*& outBufferWritePtr, size_t outBufferSize, ImVector<ImTextParsedTag>& tagStack)
+{
+    const char* current = tagStart;
+
+    ImTextParsedTag newTag;
+
+    while (current < strEnd)
+    {
+        // Start of a Open Tag or Close Tag
+        if (*current == '<')
+        {
+            if (newTag.tagNameStart == nullptr)
+            {
+                // Parse Tag + Attribute
+                ++current;
+                newTag.tagNameStart = current;
+                newTag.rangeStart = outBufferWritePtr;
+
+                while (*current != '>' && current < strEnd)
+                {
+                    // check for attributes.
+                    if (newTag.attributeStart == nullptr && (*current == ' ' || *current == '='))
+                    {
+                        newTag.tagNameEnd = current;
+                        ++current;
+                        newTag.attributeStart = current;
+                        continue;
+                    }
+
+                    ++current;
+                }
+
+                if (newTag.tagNameEnd == nullptr)
+                {
+                    newTag.tagNameEnd = current;
+                }
+                else
+                {
+                    newTag.attributeEnd = current;
+                }
+
+                ++current;
+            }
+            else if (*(current + 1) != '/')
+            {
+                // Nested Tag
+                current = ParseTextCustomizationTag(current, strEnd, outBuffer, outBufferWritePtr, outBufferSize, tagStack);
+                if (current == nullptr)
+                {
+                    return nullptr;
+                }
+            }
+            else
+            {
+                // Closing tag.
+                if (strEnd - current < 2)
+                {
+                    // Malformed.
+                    return nullptr;
+                }
+
+                ++current; // Eat the '<'
+                ++current; // Eat the '/'
+                const char* closingTagStart = current;
+                do
+                {
+                    ++current;
+                } while (*current != '>' && current < strEnd);
+
+                const char* closingTagEnd = current;
+                size_t startTagSize = newTag.tagNameEnd - newTag.tagNameStart;
+                size_t endTagSize = closingTagEnd - closingTagStart;
+
+                if (startTagSize == endTagSize && memcmp(newTag.tagNameStart, closingTagStart, startTagSize) == 0)
+                {
+                    // Valid
+                    newTag.rangeEnd = outBufferWritePtr;
+                    tagStack.push_back(newTag);
+                    ++current;
+                    return current;
+                }
+                else
+                {
+                    // Malformed.
+                    return nullptr;
+                }
+
+            }
+        }
+        else
+        {
+            if (outBufferWritePtr >= (outBuffer + outBufferSize))
+            {
+                // Ran out of room in buffer.
+                return nullptr;
+            }
+
+            *outBufferWritePtr = *current;
+            ++outBufferWritePtr;
+            ++current;
+        }
+
+    }
+
+    // Malformed.
+    return nullptr; 
+}
+
+size_t ParseTextCustomizationString(const char* strStart, const char* strEnd, char* outBuffer, size_t outBufferSize, ImVector<ImTextParsedTag>& tagStack)
+{
+    char* outBufferWritePtr = outBuffer;
+    const char* current = strStart;
+
+    while (current < strEnd)
+    {
+        if (*current == '<')
+        {
+            current = ParseTextCustomizationTag(current, strEnd, outBuffer, outBufferWritePtr, outBufferSize - (outBufferWritePtr - outBuffer), tagStack);
+
+            // Some error occurred. Copy the original string and exit.
+            if (current == nullptr)
+            {
+                tagStack.clear();
+                outBufferWritePtr = outBuffer + ImMin(outBufferSize - 1, (size_t)(strEnd - strStart));
+                memcpy(outBuffer, strStart, outBufferWritePtr - outBuffer);
+                break;
+            }
+        }
+        else
+        {
+            *outBufferWritePtr = *current;
+            ++outBufferWritePtr;
+            ++current;
+        }
+    }
+
+    IM_ASSERT((size_t)(outBufferWritePtr - outBuffer) < outBufferSize);
+    *outBufferWritePtr = '\0';
+
+    return (outBufferWritePtr - outBuffer);
+}
+
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, const ImTextCustomization* customization ) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
+
+    size_t sanitizedBufferSize = (size_t)(text_end - text_begin) + 1;
+    char* sanitizedTextBuffer = (char*)ImGui::FrameMemAlloc(sanitizedBufferSize);
+
+    ImGuiContext* context = ImGui::GetCurrentContext();
+
+    ImVector<ImTextParsedTag>& tagStack = context->TextCustomization.parsedTagVec;
+    tagStack.resize(0);
+    size_t sanitizedStringLength = ParseTextCustomizationString(text_begin, text_end, sanitizedTextBuffer, sanitizedBufferSize, tagStack);
+
+    text_begin = sanitizedTextBuffer;
+    text_end = text_begin + sanitizedStringLength;
 
     // Align to be pixel perfect
     float x = IM_FLOOR(pos.x);
     float y = IM_FLOOR(pos.y);
     if (y > clip_rect.w)
+    {
+        ImGui::FrameMemFree(sanitizedTextBuffer);
         return;
+    }
 
     const float start_x = x;
     const float scale = size / FontSize;
@@ -3720,283 +3903,83 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         }
         text_end = s_end;
     }
+
     if (s == text_end)
+    {
+        ImGui::FrameMemFree(sanitizedTextBuffer);
         return;
-
-    // draw_list_text 
-    ImDrawList* draw_list_text = nullptr;
-
-    // Create a dedicated draw list for text. The reason is that the highlight texts must draw before the text.
-    // The highlight texts is generated during the glyph drawing process.
-    if (customization)
-    {
-        draw_list_text = new ImDrawList(ImGui::GetDrawListSharedData());
-        draw_list_text->AddDrawCmd();
     }
-    else
+
+    // BEGIN TEXT CUSTOMIZATION
+
+    ImVector<const ImTextParsedTag*>& tags_by_render_order = context->TextCustomization.parsedTagsByRenderOrder;
+    tags_by_render_order.resize(0);
+
+    const char* minTagRange = text_end;
+    const char* maxTagRange = text_begin;
+
+    for(ImTextParsedTag& tag : tagStack)
     {
-        draw_list_text = draw_list;
+        tag.tagId = ImGui::GetID(tag.tagNameStart, tag.tagNameEnd);
+        tag.tagCustomization = context->TextCustomization.GetCustomizationByID(tag.tagId);
+        if (tag.tagCustomization->Parser)
+        {
+            (*tag.tagCustomization->Parser)(tag.tagId, tag.attributeStart, tag.attributeEnd, &tag.userData);
+        }
+
+        // Grab our min/max range while we iterate.
+        minTagRange = ImMin(tag.rangeStart, minTagRange);
+        maxTagRange = ImMax(tag.rangeEnd, maxTagRange);
+
+        // Sort tags by render priority (in case some need to render before/after others).
+        if (tags_by_render_order.size() == 0)
+        {
+            tags_by_render_order.push_back(&tag);
+        }
+        else
+        {
+            // Just insertion sort these, we don't expect a ton of tags active at once. Could quicksort if needed.
+            for (int insertIndex = 0; insertIndex <= tags_by_render_order.size(); ++insertIndex)
+            {
+                if (insertIndex == tags_by_render_order.size())
+                {
+                    tags_by_render_order.push_back(&tag);
+                }
+                else if (tag.tagCustomization->Priority < tags_by_render_order[insertIndex]->tagCustomization->Priority)
+                {
+                    tags_by_render_order.insert(tags_by_render_order.Data + insertIndex, &tag);
+                    break;
+                }
+            }
+        }
     }
+    // END TEXT CUSTOMIZATION
+
+    //// Create a dedicated draw list for text. The reason is that the highlight texts must draw before the text.
+    //// The highlight texts is generated during the glyph drawing process.
+    //if (customization)
+    //{
+    //    draw_list_text = new ImDrawList(ImGui::GetDrawListSharedData());
+    //    draw_list_text->AddDrawCmd();
+    //}
+    //else
+    //{
+    //    draw_list_text = draw_list;
+    //}
 
     // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
     const int vtx_count_max = (int)(text_end - s) * 4;
     const int idx_count_max = (int)(text_end - s) * 6;
-    const int idx_expected_size = draw_list_text->IdxBuffer.Size + idx_count_max;
-    draw_list_text->PrimReserve(idx_count_max, vtx_count_max);
-    ImDrawVert*  vtx_write = draw_list_text->_VtxWritePtr;
-    ImDrawIdx*   idx_write = draw_list_text->_IdxWritePtr;
-    unsigned int vtx_index = draw_list_text->_VtxCurrentIdx;
+    const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
+    draw_list->PrimReserve(idx_count_max, vtx_count_max);
+    ImDrawVert*  vtx_write = draw_list->_VtxWritePtr;
+    ImDrawIdx*   idx_write = draw_list->_IdxWritePtr;
+    unsigned int vtx_index = draw_list->_VtxCurrentIdx;
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
     const char* word_wrap_eol = NULL;
 
     ImU32 text_col = col;
-#define IMGUI_TEXT_CUSTOMIZATION_WIP 0
-#if IMGUI_TEXT_CUSTOMIZATION_WIP
-    struct TagCustomizationData
-    {
-        TagCustomizationData(ImGuiID _id, const ImTextCustomizationTag& _tagData, void* _userData):id(_id), tagData(&_tagData), userData(_userData) {}
-        ImGuiID id;
-        const ImTextCustomizationTag* tagData;
-        void* userData;
-    };
-
-    ImVector<TagCustomizationData> customizationStack;
-    ImVector<const TagCustomizationData*> customizationRenderOrder;
-    const ImGuiContext* context = ImGui::GetCurrentContext();
-#endif
-    struct _CustomizationParser
-    {
-        // customization for the text
-        // read-only during the lifetime of this struct
-        const ImTextCustomization* custom_style;
-        // the text passed to RenderText
-        // read-only during the lifetime of this struct
-        const char* text_begin;
-        const char* text_end;
-
-        // cache of the text col, as a default color of underline or strike-through,
-        // read-only during the lifetime of this struct
-        ImU32 text_col;
-
-        // text size,
-        // read-only during the lifetime of this struct
-        float size;
-
-        // font, read-only during the lifetime of this struct
-        const ImFont* font;
-
-        // the text lien height, read-only during the lifetime of this struct
-        float line_height;
-        float strikethrough_offset_y;
-
-        // style for the current glyph and last glyph
-        ImTextCustomization::Style style, last_style;
-
-        // top left x, y value for the current glyph
-        float x;
-        float y;
-
-        // Data to hold segment position and color
-        // One segment can cover more than one glyphs
-        struct SegmentPosCol
-        {
-            ImVec2 BeginPos;
-            ImVec2 EndPos;
-            ImU32  Color;
-        };
-
-        struct Segments
-        {
-            // indicates if current glyph starts a new line caused by word warp or one or more \n
-            // 0: still in the same line.
-            // >0: starts a new line
-            int new_line = 0;
-
-            // top left x, y value before new line (caused by word warp or line break \n)
-            float x_wrap_eol = 0.0f;
-            float y_wrap_eol = 0.0f;
-
-            // the segments generated for underline, highlight, strike-through etc.
-            ImVector<SegmentPosCol> data;
-
-            // CTOR
-            Segments() :new_line(0), x_wrap_eol(0.0f), y_wrap_eol(0.0f) { }
-
-            void OnNewLine(const char* char_pos, float x_pos, float y_pos)
-            {
-                // prevent unused error
-                (void*)char_pos;
-
-                // Remember the x, y position of the last glyph before we start a new line 
-                if (++new_line == 1)
-                {
-                    x_wrap_eol = x_pos;
-                    y_wrap_eol = y_pos;
-                }
-            }
-        };
-        Segments underline_segments;
-        Segments strikethrough_segments;
-        Segments highlight_segments;
-        Segments mask_segments;
-
-        // CTOR
-        _CustomizationParser(ImU32 text_col, float size, const char* text_begin, const char* text_end, const ImFont* font, const ImTextCustomization* custom_style) :
-            text_col(text_col), size(size), text_begin(text_begin), text_end(text_end), font(font), custom_style(custom_style)
-        {
-            line_height = size;
-            // Reference MS Word Office SW, the strike y position is about 59% line_height down.
-            strikethrough_offset_y = (line_height * 59.f / 100.f);
-        }
-
-        // Called for every glyph with is about to draw. It returns the color for the glyph 
-        ImU32 OnNewGlyph(const char* glyph_pos, const char* glyph_end, unsigned int glyph_code, float x_pos, float y_pos)
-        {
-            // this->x and this-> are readonly only change it here.
-            this->x = x_pos;
-            this->y = y_pos;
-
-            ImU32 col = text_col;
-
-            // check custom style
-            last_style = style;
-            style = custom_style->GetStyleByPosition(glyph_pos);
-
-            // Update text color
-            if (style.Disabled)
-            {
-                col = text_col;
-            }
-            else if (style.Text)
-            {
-                col = style.TextColor;
-            }
-
-            // call internal method to process for each segments
-            _InternalOnNewGlyph(highlight_segments, glyph_end, glyph_code, style.HighlightColor, last_style.HighlightColor, style.Highlight, last_style.Highlight, 0.0f, line_height);
-            _InternalOnNewGlyph(underline_segments, glyph_end, glyph_code, style.UnderlineColor, last_style.UnderlineColor, style.Underline, last_style.Underline, line_height, line_height);
-            _InternalOnNewGlyph(strikethrough_segments, glyph_end, glyph_code, style.StrikethroughColor, last_style.StrikethroughColor, style.Strikethrough, last_style.Strikethrough, strikethrough_offset_y, strikethrough_offset_y);
-            _InternalOnNewGlyph(mask_segments, glyph_end, glyph_code, style.MaskColor, last_style.MaskColor, style.Mask, last_style.Mask, 0.0f, line_height);
-            return col;
-        }
-
-        // Handles the new line which caused by word warp or \n. Multiple \n will result the new_line > 1
-        void OnNewLine(const char* char_pos, float x_pos, float y_pos)
-        {
-            // Remember the x, y position of the last glyph before we start a new line
-            highlight_segments.OnNewLine(char_pos, x_pos, y_pos);
-            underline_segments.OnNewLine(char_pos, x_pos, y_pos);
-            strikethrough_segments.OnNewLine(char_pos, x_pos, y_pos);
-            mask_segments.OnNewLine(char_pos, x_pos, y_pos);
-
-            // Reaches to the end of the end of the text. this is the last chance to close all open position
-            if (char_pos == text_end)
-            {
-                _InternalOnNewGlyph(highlight_segments, char_pos, 0, style.HighlightColor, last_style.HighlightColor, style.Highlight, last_style.Highlight, 0.0f, line_height);
-                _InternalOnNewGlyph(underline_segments, char_pos, 0, style.UnderlineColor, last_style.UnderlineColor, style.Underline, last_style.Underline, line_height, line_height);
-                _InternalOnNewGlyph(strikethrough_segments, char_pos, 0, style.StrikethroughColor, last_style.StrikethroughColor, style.Strikethrough, last_style.Strikethrough, strikethrough_offset_y, strikethrough_offset_y);
-                _InternalOnNewGlyph(mask_segments, char_pos, 0, style.MaskColor, last_style.MaskColor, style.Mask, last_style.Mask, 0.0f, line_height);
-            }
-        }
-
-        // skip to process the successive glyph
-        // We will need to discard any incomplete positions(open positions)
-        void OnSkipSuccessiveGlyph()
-        {
-            while (underline_segments.data.Size > 0 && underline_segments.data.back().EndPos.x == FLT_MAX)
-            {
-                underline_segments.data.pop_back();
-            }
-            while (strikethrough_segments.data.Size > 0 && strikethrough_segments.data.back().EndPos.x == FLT_MAX)
-            {
-                strikethrough_segments.data.pop_back();
-            }
-            while (highlight_segments.data.Size > 0 && highlight_segments.data.back().EndPos.x == FLT_MAX)
-            {
-                highlight_segments.data.pop_back();
-            }
-            while (mask_segments.data.Size > 0 && mask_segments.data.back().EndPos.x == FLT_MAX)
-            {
-                mask_segments.data.pop_back();
-            }
-        }
-
-        // Internal method to be reused for highlight, underline, strike-through and text mask
-        void _InternalOnNewGlyph(Segments& segments, const char* glyph_end, unsigned int glyph_code, ImU32 color, ImU32 last_color,
-            bool current_on, bool last_on, float begin_pt_offset_y, float end_pt_offset_y)
-        {
-            // a segment can cover one or more glyphs
-            if (!last_on && current_on) // new segment begin
-            {
-                if (glyph_end == text_end)
-                {
-                    const ImFontGlyph* glyph = font->FindGlyph((ImWchar)glyph_code);
-                    const float cw = glyph == NULL ? 0.0f : glyph->AdvanceX * (size / font->FontSize);
-                    segments.data.back().EndPos = ImVec2(x + cw, y + end_pt_offset_y);
-                }
-                else
-                {
-                    if (color == 0) color = text_col;
-                    segments.data.push_back({ ImVec2(x, y + begin_pt_offset_y), ImVec2(FLT_MAX, FLT_MAX), color });
-                    // segment begins from a new line
-                    if (segments.new_line) segments.new_line = 0;
-                }
-            }
-            else if (last_on && current_on) // segment goes on to cover this glyph
-            {
-                // complete the segment if we reaches to the end of the text
-                if (glyph_end == text_end)
-                {
-                    const ImFontGlyph* glyph = font->FindGlyph((ImWchar)glyph_code);
-                    const float cw = glyph == NULL ? 0.0f : glyph->AdvanceX * (size / font->FontSize);
-                    segments.data.back().EndPos = ImVec2(x + cw, y + end_pt_offset_y);
-                }
-                // handle new line caused by word wrap or \n
-                else if (segments.new_line > 0)
-                {
-                    // need end the segment with point we saved before new line starting
-                    segments.data.back().EndPos = ImVec2(segments.x_wrap_eol, segments.y_wrap_eol + end_pt_offset_y);
-                    // start a new segment with current point
-                    if (color == 0) color = text_col;
-                    segments.data.push_back({ ImVec2(x, y + begin_pt_offset_y), ImVec2(FLT_MAX, FLT_MAX), color });
-                    segments.new_line = 0;
-                }
-                // color changes. this often happens when
-                // 1. Late defined range with different color immediately follows an early defined range (or vice versa)
-                // 2. Late defined range with different color partially overlaps an early defined range (or or vice versa)
-                // 3. Late defined range with different color is inside an early defined range (or vice versa)
-                // The all the net result looks like the early defined range paint first, the late defined range paint secondly.
-                else if (color != last_color)
-                {
-                    // need end the segment
-                    segments.data.back().EndPos = ImVec2(x, y + end_pt_offset_y);
-                    // start a new segment with current point
-                    if (color == 0) color = text_col;
-                    segments.data.push_back({ ImVec2(x, y + begin_pt_offset_y), ImVec2(FLT_MAX, FLT_MAX), color });
-                }
-
-            }
-            else if (last_on && !current_on && segments.data.Size > 0) // the current segment end
-            {
-                // special case, the segment ends with new line(word wrap or one or more \n) followed
-                if (segments.new_line > 0)
-                {
-                    segments.data.back().EndPos = ImVec2(segments.x_wrap_eol, segments.y_wrap_eol + end_pt_offset_y);
-                    segments.new_line = 0;
-                }
-                // normal case, the segment ended without new line followed
-                else
-                {
-                    segments.data.back().EndPos = ImVec2(x, y + end_pt_offset_y);
-                }
-            }
-        }
-
-    };
-
-    // Create text customization parser, it is only called if customization is applied.
-    _CustomizationParser parser(text_col, size, text_begin, text_end, this, customization);
 
     while (s < text_end)
     {
@@ -4016,16 +3999,13 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
                 y += line_height;
                 word_wrap_eol = NULL;
                 s = CalcWordWrapNextLineStartA(s, text_end); // Wrapping skips upcoming blanks
-                // process the new line event
-                if (customization)
-                    parser.OnNewLine(s, old_x, old_y);
                 continue;
             }
         }
 
         // Decode and advance source
         unsigned int c = (unsigned int)*s;
-        const char* glyph_pos = s; //backup it for customization style check
+
         if (c < 0x80)
             s += 1;
         else
@@ -4044,14 +4024,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
                 x = start_x;
                 y += line_height;
 
-                // process the new line event
-                if (customization)
-                    parser.OnNewLine(s, old_x, old_y);
-
                 if (y > clip_rect.w)
                 {
-                    if (customization)
-                        parser.OnSkipSuccessiveGlyph();
                     break; // break out of main loop
                 }
                 continue;
@@ -4060,297 +4034,165 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
                 continue;
         }
 
-#if IMGUI_TEXT_CUSTOMIZATION_WIP // WIP
-        /// Customization Parse Start
-        if (*s == '<')
-        {
-            const char* posOnFail = s;
-            const char* customTagNameStart = NULL;
-            const char* customTagNameEnd = NULL;
-            const char* customTagParamStart = NULL;
-            const char* customTagParamEnd = NULL;
-            bool isClosingTag = false;
-            bool rebuildRenderOrder = false;
-
-            ++s;
-            while (true)
-            {
-                if (s == text_end)
-                {
-                    // Malformed node.
-                    s = posOnFail;
-                    break;
-                }
-
-                if (customTagNameStart == NULL) // Find out name start.
-                {
-                    if (*s == ' ')
-                    {
-                        ++s;
-                    }
-                    else if (*s == '/')
-                    {
-                        isClosingTag = true;
-                        ++s;
-                    }
-                    else
-                    {
-                        customTagNameStart = s;
-                        ++s;
-                    }
-                }
-                else if (customTagNameEnd == NULL) // Find our name end.
-                {
-                    if (*s != ' ' && *s != '>')
-                    {
-                        ++s;
-                    }
-                    else
-                    {
-                        customTagNameEnd = s - 1;
-                        if (*s == ' ')
-                        {
-                            ++s;
-                            customTagParamStart = s;
-                        }
-                        else
-                        {
-                            ++s;
-                            break;
-                        }
-                    }
-                }
-                else if (customTagParamEnd == NULL)
-                {
-                    if (*s != '>')
-                    {
-                        ++s;
-                    }
-                    else
-                    {
-                        customTagParamEnd = s;
-                        break;
-                    }
-                }
-
-            }
-
-            ImGuiID nameId = ImGui::GetID(customTagNameStart, customTagNameEnd);
-
-            if (isClosingTag)
-            {
-                IM_ASSERT_USER_ERROR(customizationStack.size() != 0, "Closing tag was found but there is nothing on the stack. Empty tags '<Tag/>' are not allowed.");
-
-                // We walk backwards so if you have nested of the same time, the latest one gets popped first.
-                for (size_t removeTagIdx = customizationStack.size(); removeTagIdx != 0; --removeTagIdx)
-                {
-                    if (customizationStack[removeTagIdx - 1].id == nameId)
-                    {
-                        customizationStack.erase(&customizationStack[removeTagIdx -1]);
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                const ImTextCustomizationTag* customization = context->TextCustomization.GetCustomizationByID(nameId);
-                void* userData = NULL;
-                if (customization->Parser && customTagParamStart)
-                {
-                    (*customization->Parser)(nameId, customTagParamStart, customTagParamEnd, &userData);
-                }
-                customizationStack.push_back(TagCustomizationData(nameId, *customization, userData));
-            }
-
-            // Rebuild render order
-            customizationRenderOrder.clear();
-            customizationRenderOrder.reserve(customizationStack.size());
-            for (const TagCustomizationData& data : customizationStack)
-            {
-                if (customizationRenderOrder.size() == 0)
-                {
-                    customizationRenderOrder.push_back(&data);
-                }
-                else
-                {
-                   // Just insertion sort these, we don't expect a ton of tags active at once. Could quicksort if needed.
-                    for (size_t insertIndex = 0; insertIndex <= customizationRenderOrder.size(); ++insertIndex)
-                    {
-                        if (insertIndex == customizationRenderOrder.size())
-                        {
-                            customizationRenderOrder.push_back(&data);
-                        }
-                        else if (data.tagData->Priority < customizationRenderOrder[insertIndex]->tagData->Priority)
-                        {
-                            customizationRenderOrder.insert(customizationRenderOrder.Data + insertIndex, &data);
-                            break;
-                        }
-                   }
-                }
-            }     
-        }
-        /// Customization Parse End
-#endif
-        if (customization)
-            col = parser.OnNewGlyph(glyph_pos, s, c, x, y);
-
         const ImFontGlyph* glyph = FindGlyph((ImWchar)c);
         if (glyph == NULL)
             continue;
-#if IMGUI_TEXT_CUSTOMIZATION_WIP
-        /// Customization Parse Start
-        if (customizationRenderOrder.size() != 0)
+
+        if (s >= minTagRange && s <= maxTagRange)
         {
-            for (const TagCustomizationData* activeTags : customizationRenderOrder)
+            for (const ImTextParsedTag* tagData : tags_by_render_order)
             {
-                ImGuiTextCustomizationRenderCallback callback = activeTags->tagData->Renderer;
-                (*callback)(activeTags->id, glyph, x, y, draw_list_text,activeTags->userData);
-            }
-        }
-        /// Customization Parse End
-#endif
-        float char_width = glyph->AdvanceX * scale;
-        if (glyph->Visible)
-        {
-            // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
-            float x1 = x + glyph->X0 * scale;
-            float x2 = x + glyph->X1 * scale;
-            float y1 = y + glyph->Y0 * scale;
-            float y2 = y + glyph->Y1 * scale;
-            if (x1 <= clip_rect.z && x2 >= clip_rect.x)
-            {
-                // Render a character
-                float u1 = glyph->U0;
-                float v1 = glyph->V0;
-                float u2 = glyph->U1;
-                float v2 = glyph->V1;
-
-                // CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quads.
-                if (cpu_fine_clip)
+                if (s >= tagData->rangeStart && s <= tagData->rangeEnd)
                 {
-                    if (x1 < clip_rect.x)
-                    {
-                        u1 = u1 + (1.0f - (x2 - clip_rect.x) / (x2 - x1)) * (u2 - u1);
-                        x1 = clip_rect.x;
-                    }
-                    if (y1 < clip_rect.y)
-                    {
-                        v1 = v1 + (1.0f - (y2 - clip_rect.y) / (y2 - y1)) * (v2 - v1);
-                        y1 = clip_rect.y;
-                    }
-                    if (x2 > clip_rect.z)
-                    {
-                        u2 = u1 + ((clip_rect.z - x1) / (x2 - x1)) * (u2 - u1);
-                        x2 = clip_rect.z;
-                    }
-                    if (y2 > clip_rect.w)
-                    {
-                        v2 = v1 + ((clip_rect.w - y1) / (y2 - y1)) * (v2 - v1);
-                        y2 = clip_rect.w;
-                    }
-                    if (y1 >= y2)
-                    {
-                        x += char_width;
-                        continue;
-                    }
-                }
-
-                // Support for untinted glyphs
-                ImU32 glyph_col = glyph->Colored ? col_untinted : col;
-
-                // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
-                {
-                    vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = glyph_col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
-                    vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = glyph_col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
-                    vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = glyph_col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
-                    vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = glyph_col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
-                    idx_write[0] = (ImDrawIdx)(vtx_index); idx_write[1] = (ImDrawIdx)(vtx_index + 1); idx_write[2] = (ImDrawIdx)(vtx_index + 2);
-                    idx_write[3] = (ImDrawIdx)(vtx_index); idx_write[4] = (ImDrawIdx)(vtx_index + 2); idx_write[5] = (ImDrawIdx)(vtx_index + 3);
-                    vtx_write += 4;
-                    vtx_index += 4;
-                    idx_write += 6;
+                    (*tagData->tagCustomization->Renderer)(tagData->tagId, glyph, x, y, draw_list, tagData->userData);
                 }
             }
         }
-        x += char_width;
+        else
+        {
+            float char_width = glyph->AdvanceX * scale;
+            if (glyph->Visible)
+            {
+                // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
+                float x1 = x + glyph->X0 * scale;
+                float x2 = x + glyph->X1 * scale;
+                float y1 = y + glyph->Y0 * scale;
+                float y2 = y + glyph->Y1 * scale;
+                if (x1 <= clip_rect.z && x2 >= clip_rect.x)
+                {
+                    // Render a character
+                    float u1 = glyph->U0;
+                    float v1 = glyph->V0;
+                    float u2 = glyph->U1;
+                    float v2 = glyph->V1;
+
+                    // CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quads.
+                    if (cpu_fine_clip)
+                    {
+                        if (x1 < clip_rect.x)
+                        {
+                            u1 = u1 + (1.0f - (x2 - clip_rect.x) / (x2 - x1)) * (u2 - u1);
+                            x1 = clip_rect.x;
+                        }
+                        if (y1 < clip_rect.y)
+                        {
+                            v1 = v1 + (1.0f - (y2 - clip_rect.y) / (y2 - y1)) * (v2 - v1);
+                            y1 = clip_rect.y;
+                        }
+                        if (x2 > clip_rect.z)
+                        {
+                            u2 = u1 + ((clip_rect.z - x1) / (x2 - x1)) * (u2 - u1);
+                            x2 = clip_rect.z;
+                        }
+                        if (y2 > clip_rect.w)
+                        {
+                            v2 = v1 + ((clip_rect.w - y1) / (y2 - y1)) * (v2 - v1);
+                            y2 = clip_rect.w;
+                        }
+                        if (y1 >= y2)
+                        {
+                            x += char_width;
+                            continue;
+                        }
+                    }
+
+                    // Support for untinted glyphs
+                    ImU32 glyph_col = glyph->Colored ? col_untinted : col;
+
+                    // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
+                    {
+                        vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = glyph_col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
+                        vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = glyph_col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
+                        vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = glyph_col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
+                        vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = glyph_col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+                        idx_write[0] = (ImDrawIdx)(vtx_index); idx_write[1] = (ImDrawIdx)(vtx_index + 1); idx_write[2] = (ImDrawIdx)(vtx_index + 2);
+                        idx_write[3] = (ImDrawIdx)(vtx_index); idx_write[4] = (ImDrawIdx)(vtx_index + 2); idx_write[5] = (ImDrawIdx)(vtx_index + 3);
+                        vtx_write += 4;
+                        vtx_index += 4;
+                        idx_write += 6;
+                    }
+                }
+            }
+            x += char_width;
+        }
     }
 
     // Give back unused vertices (clipped ones, blanks) ~ this is essentially a PrimUnreserve() action.
-    draw_list_text->VtxBuffer.Size = (int)(vtx_write - draw_list_text->VtxBuffer.Data); // Same as calling shrink()
-    draw_list_text->IdxBuffer.Size = (int)(idx_write - draw_list_text->IdxBuffer.Data);
-    draw_list_text->CmdBuffer[draw_list_text->CmdBuffer.Size - 1].ElemCount -= (idx_expected_size - draw_list_text->IdxBuffer.Size);
-    draw_list_text->_VtxWritePtr = vtx_write;
-    draw_list_text->_IdxWritePtr = idx_write;
-    draw_list_text->_VtxCurrentIdx = vtx_index;
+    draw_list->VtxBuffer.Size = (int)(vtx_write - draw_list->VtxBuffer.Data); // Same as calling shrink()
+    draw_list->IdxBuffer.Size = (int)(idx_write - draw_list->IdxBuffer.Data);
+    draw_list->CmdBuffer[draw_list->CmdBuffer.Size - 1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
+    draw_list->_VtxWritePtr = vtx_write;
+    draw_list->_IdxWritePtr = idx_write;
+    draw_list->_VtxCurrentIdx = vtx_index;
 
 
-    if (customization)
-    {
-        // Draw the highlight firt because it's the backgroud of the text
-        for (int i = 0; i < parser.highlight_segments.data.Size; i++)
-        {
-            IM_ASSERT_USER_ERROR(parser.highlight_segments.data.back().EndPos.x != FLT_MAX && parser.highlight_segments.data.back().EndPos.y != FLT_MAX, "EndPos is expected no valide value.");
-            ImVec2 begin = parser.highlight_segments.data[i].BeginPos;
-            ImVec2 end = parser.highlight_segments.data[i].EndPos;
-            ImColor color = parser.highlight_segments.data[i].Color;
-            draw_list->AddRectFilled(begin, end, color);
-        }
+    //if (customization)
+    //{
+    //    // Draw the highlight firt because it's the backgroud of the text
+    //    for (int i = 0; i < parser.highlight_segments.data.Size; i++)
+    //    {
+    //        IM_ASSERT_USER_ERROR(parser.highlight_segments.data.back().EndPos.x != FLT_MAX && parser.highlight_segments.data.back().EndPos.y != FLT_MAX, "EndPos is expected no valide value.");
+    //        ImVec2 begin = parser.highlight_segments.data[i].BeginPos;
+    //        ImVec2 end = parser.highlight_segments.data[i].EndPos;
+    //        ImColor color = parser.highlight_segments.data[i].Color;
+    //        draw_list->AddRectFilled(begin, end, color);
+    //    }
 
-        // Append draw_list_text to the main draw_lists
-        {
-            unsigned int old_inx_buffer_sz = draw_list->IdxBuffer.Size;
-            unsigned int old_vtx_buffer_sz = draw_list->VtxBuffer.Size;
-            draw_list->PrimReserve(draw_list_text->IdxBuffer.Size, draw_list_text->VtxBuffer.Size);
-            // draw_list_text->VtxBuffer buffer can be memcopied, it contains no relative data
-            memcpy(draw_list->_VtxWritePtr, draw_list_text->VtxBuffer.Data, draw_list_text->VtxBuffer.Size * sizeof(ImDrawVert));
-            // draw_list_text->IdxBuffer buffer cann't because the index value in the IdxBuffer points to draw_list_text->VtxBuffer. It need aligned to draw_list->VtxBuffer.
-            for (int i = 0; i < draw_list_text->IdxBuffer.Size; i++)
-            {
-                draw_list->IdxBuffer[old_inx_buffer_sz + i] = (ImDrawIdx)(old_vtx_buffer_sz + draw_list_text->IdxBuffer[i]);
-            }
-            draw_list->_VtxWritePtr += draw_list_text->VtxBuffer.Size;
-            draw_list->_IdxWritePtr += draw_list_text->IdxBuffer.Size;
-            draw_list->_VtxCurrentIdx += vtx_index;
+    //    // Append draw_list_text to the main draw_lists
+    //    {
+    //        unsigned int old_inx_buffer_sz = draw_list->IdxBuffer.Size;
+    //        unsigned int old_vtx_buffer_sz = draw_list->VtxBuffer.Size;
+    //        draw_list->PrimReserve(draw_list_text->IdxBuffer.Size, draw_list_text->VtxBuffer.Size);
+    //        // draw_list_text->VtxBuffer buffer can be memcopied, it contains no relative data
+    //        memcpy(draw_list->_VtxWritePtr, draw_list_text->VtxBuffer.Data, draw_list_text->VtxBuffer.Size * sizeof(ImDrawVert));
+    //        // draw_list_text->IdxBuffer buffer cann't because the index value in the IdxBuffer points to draw_list_text->VtxBuffer. It need aligned to draw_list->VtxBuffer.
+    //        for (int i = 0; i < draw_list_text->IdxBuffer.Size; i++)
+    //        {
+    //            draw_list->IdxBuffer[old_inx_buffer_sz + i] = (ImDrawIdx)(old_vtx_buffer_sz + draw_list_text->IdxBuffer[i]);
+    //        }
+    //        draw_list->_VtxWritePtr += draw_list_text->VtxBuffer.Size;
+    //        draw_list->_IdxWritePtr += draw_list_text->IdxBuffer.Size;
+    //        draw_list->_VtxCurrentIdx += vtx_index;
 
-            // Free draw_list_text. It is created for customized text only 
-            delete draw_list_text;
-        }
+    //        // Free draw_list_text. It is created for customized text only 
+    //        delete draw_list_text;
+    //    }
 
-        // Draw the underlines
-        for (int i = 0; i < parser.underline_segments.data.Size; i++)
-        {
-            IM_ASSERT_USER_ERROR(parser.underline_segments.data.back().EndPos.x != FLT_MAX && parser.underline_segments.data.back().EndPos.y != FLT_MAX, "EndPos is expected no valide value.");
-            ImVec2 begin = parser.underline_segments.data[i].BeginPos;
-            ImVec2 end = parser.underline_segments.data[i].EndPos;
-            ImColor color = parser.underline_segments.data[i].Color;
-            // The underlines is about 6.5% line height
-            float thickness = (float)ceill(ImMax<float>(1.0f, line_height * 6.5f / 100.0f));
-            draw_list->AddLine(begin, end, color, thickness);
-        }
+    //    // Draw the underlines
+    //    for (int i = 0; i < parser.underline_segments.data.Size; i++)
+    //    {
+    //        IM_ASSERT_USER_ERROR(parser.underline_segments.data.back().EndPos.x != FLT_MAX && parser.underline_segments.data.back().EndPos.y != FLT_MAX, "EndPos is expected no valide value.");
+    //        ImVec2 begin = parser.underline_segments.data[i].BeginPos;
+    //        ImVec2 end = parser.underline_segments.data[i].EndPos;
+    //        ImColor color = parser.underline_segments.data[i].Color;
+    //        // The underlines is about 6.5% line height
+    //        float thickness = (float)ceill(ImMax<float>(1.0f, line_height * 6.5f / 100.0f));
+    //        draw_list->AddLine(begin, end, color, thickness);
+    //    }
 
-        // Draw the strike-through lines
-        for (int i = 0; i < parser.strikethrough_segments.data.Size; i++)
-        {
-            IM_ASSERT_USER_ERROR(parser.strikethrough_segments.data.back().EndPos.x != FLT_MAX && parser.strikethrough_segments.data.back().EndPos.y != FLT_MAX, "EndPos is expected no valide value.");
-            // if (parser.strikethrough_segments.data.back().EndPos.x == FLT_MAX) printf("***********EndPos == FLT_MAX\n");
-            ImVec2 begin = parser.strikethrough_segments.data[i].BeginPos;
-            ImVec2 end = parser.strikethrough_segments.data[i].EndPos;
-            ImColor color = parser.strikethrough_segments.data[i].Color;
-            // The strke-through is about 4.5% line height
-            float thickness = (float)ceill(ImMax<float>(1.0f, line_height * 4.5f / 100.0f));
-            draw_list->AddLine(begin, end, color, thickness);
-        }
+    //    // Draw the strike-through lines
+    //    for (int i = 0; i < parser.strikethrough_segments.data.Size; i++)
+    //    {
+    //        IM_ASSERT_USER_ERROR(parser.strikethrough_segments.data.back().EndPos.x != FLT_MAX && parser.strikethrough_segments.data.back().EndPos.y != FLT_MAX, "EndPos is expected no valide value.");
+    //        // if (parser.strikethrough_segments.data.back().EndPos.x == FLT_MAX) printf("***********EndPos == FLT_MAX\n");
+    //        ImVec2 begin = parser.strikethrough_segments.data[i].BeginPos;
+    //        ImVec2 end = parser.strikethrough_segments.data[i].EndPos;
+    //        ImColor color = parser.strikethrough_segments.data[i].Color;
+    //        // The strke-through is about 4.5% line height
+    //        float thickness = (float)ceill(ImMax<float>(1.0f, line_height * 4.5f / 100.0f));
+    //        draw_list->AddLine(begin, end, color, thickness);
+    //    }
 
-        // Draw the mask last because is used to mask the text
-        for (int i = 0; i < parser.mask_segments.data.Size; i++)
-        {
-            IM_ASSERT_USER_ERROR(parser.mask_segments.data.back().EndPos.x != FLT_MAX && parser.mask_segments.data.back().EndPos.y != FLT_MAX, "EndPos is expected no valide value.");
-            ImVec2 begin = parser.mask_segments.data[i].BeginPos;
-            ImVec2 end = parser.mask_segments.data[i].EndPos;
-            ImColor color = parser.mask_segments.data[i].Color;
-            draw_list->AddRectFilled(begin, end, color);
-        }
-    }
+    //    // Draw the mask last because is used to mask the text
+    //    for (int i = 0; i < parser.mask_segments.data.Size; i++)
+    //    {
+    //        IM_ASSERT_USER_ERROR(parser.mask_segments.data.back().EndPos.x != FLT_MAX && parser.mask_segments.data.back().EndPos.y != FLT_MAX, "EndPos is expected no valide value.");
+    //        ImVec2 begin = parser.mask_segments.data[i].BeginPos;
+    //        ImVec2 end = parser.mask_segments.data[i].EndPos;
+    //        ImColor color = parser.mask_segments.data[i].Color;
+    //        draw_list->AddRectFilled(begin, end, color);
+    //    }
+    //}
 }
 
 //-----------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 #include "ACUtils/FileStream.h"
 #include "ACUtils/Enum.h"
+#include "ACUtils/Memory.h"
 #include "ACUtils/Vec.h"
 
 #include "AdventGUIConsole.h"
@@ -127,6 +128,7 @@ public:
 	}
 
 	const char* GetInputFileName() const { return m_params.inputFilename; }
+	Memory::LinearAllocator& GetImGuiFrameAllocator() { return m_imguiFrameAllocator; }
 protected:
 	AdventGUIInstance(const AdventGUIParams& params);
 
@@ -146,6 +148,7 @@ private:
 	static AdventGUIInstance* s_Instance;
 
 	AdventGUIParams m_params;
+	Memory::LinearAllocator m_imguiFrameAllocator;
 	struct GLFWwindow* m_appWindow;
 	AdventGUIContext m_context;
 	double m_appLifetime;
