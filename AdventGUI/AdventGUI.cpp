@@ -60,13 +60,18 @@ void AdventGUIInstance::OnKeyAction(struct GLFWwindow* window, int key, int scan
 	{
 		AdventGUIConsole::Get().ToggleConsole();
 	}
+	else if (key == GLFW_KEY_F1 && action == GLFW_RELEASE)
+	{
+		ToggleImGuiDemoWindow();
+	}
 }
 
 AdventGUIInstance::AdventGUIInstance(const AdventGUIParams& params)
 : m_params(params),
 m_imguiFrameAllocator(1 * 1024 * 1024),
 m_appLifetime(0.0),
-m_lastTimeStamp(0.0)
+m_lastTimeStamp(0.0),
+m_showImGuiDemo(false)
 {
 	InternalCreate();
 }
@@ -194,6 +199,11 @@ void AdventGUIInstance::DoFrame()
 	if (HasExecFlags(AdventExecuteFlags::AEF_PartTwo))
 	{
 		PartTwo(context);
+	}
+
+	if (m_showImGuiDemo)
+	{
+		ImGui::ShowDemoWindow();
 	}
 
 	m_lastTimeStamp = m_appLifetime;
