@@ -5,6 +5,7 @@
 
 #include "ACUtils/AABB.h"
 #include "ACUtils/Bit.h"
+#include "ACUtils/Debug.h"
 #include "ACUtils/Enum.h"
 #include "ACUtils/IntVec.h"
 #include "ACUtils/Math.h"
@@ -34,6 +35,9 @@ private:
 	{
 		// Parse Input. Input never changes between parts of a problem.
 		m_MapWidth = 0;
+
+		Debug::ACStopWatch stopWatch;
+		stopWatch.Start();
 
 		ExitDir dir;
 		std::string line;
@@ -115,6 +119,8 @@ private:
 			MapDistances(m_StartPos + GetOffset(currentExit), currentExit);
 			startMask &= ~currentExit;
 		}
+
+		Log("Parsing + Initial traversal took %f milliseconds.", stopWatch.Stop());
 	}
 
 	void MapDistances(IntVec2 loc, ExitDir dir)
@@ -133,6 +139,9 @@ private:
 	virtual void PartOne(const AdventGUIContext& context) override
 	{
 		// Part One
+		Debug::ACStopWatch stopWatch;
+		stopWatch.Start();
+
 		int32_t maxDistance = 0;
 		for (int32_t distance : m_Distances)
 		{
@@ -142,7 +151,7 @@ private:
 			}
 		}
 
-		Log("Max Steps %d", maxDistance);
+		Log("Max Steps %d, took %f ms to execute", maxDistance, stopWatch.Stop());
 
 		// Done.
 		AdventGUIInstance::PartOne(context);
@@ -171,6 +180,10 @@ private:
 		// Part Two
 		// 
 		// Build Poly Representation.
+
+		Debug::ACStopWatch stopWatch;
+		stopWatch.Start();
+
 		m_PipeVerts.push_back(m_StartPos);
 		
 		ExitDir currentDir = (ExitDir)(1 << Bits::CountTrailingZeros((uint32_t)GetPipe(m_StartPos)));
@@ -214,6 +227,7 @@ private:
 				if (iterPos.x >= minLineX && iterPos.x <= maxLineX && iterPos.y >= minLineY && iterPos.y <= maxLineY)
 				{
 					IsOnPoly = true;
+					break;
 				}
 			}
 
@@ -223,7 +237,7 @@ private:
 			}
 		}
 
-		Log("Total Area: %u", totalArea);
+		Log("Total Area: %u,took %fms to execute", totalArea, stopWatch.Stop());
 
 		// Done.
 		AdventGUIInstance::PartTwo(context);
