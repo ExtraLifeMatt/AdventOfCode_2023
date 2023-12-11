@@ -128,7 +128,9 @@ public:
 	}
 
 	const char* GetInputFileName() const { return m_params.inputFilename; }
-	Memory::LinearAllocator& GetImGuiFrameAllocator() { return m_imguiFrameAllocator; }
+	Memory::LinearAllocator& GetImGuiFrameAllocator() { return m_imguiFrameAllocator; } 
+
+	void ToggleImGuiDemoWindow() { m_showImGuiDemo = !m_showImGuiDemo; }
 protected:
 	AdventGUIInstance(const AdventGUIParams& params);
 
@@ -153,4 +155,5 @@ private:
 	AdventGUIContext m_context;
 	double m_appLifetime;
 	double m_lastTimeStamp;
+	bool m_showImGuiDemo;
 };
