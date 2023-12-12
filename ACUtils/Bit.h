@@ -11,12 +11,12 @@ namespace Bits
 
 	constexpr uint32_t CreateBitMask(uint32_t offset, uint32_t numberOfBits)
 	{
-		return ((1 << (numberOfBits + offset)) - 1) & ~((1 << offset) - 1);
+		return numberOfBits == 32 ? ~0U : ((1U << numberOfBits) - 1) << offset; 
 	}
 
-	constexpr uint32_t CreateBitMask64(uint32_t offset, uint32_t numberOfBits)
+	constexpr uint64_t CreateBitMask64(uint32_t offset, uint32_t numberOfBits)
 	{
-		return ((1ULL << (numberOfBits + offset)) - 1) & ~((1ULL << offset) - 1);
+		return numberOfBits == 64 ? ~0ULL : ((1ULL << numberOfBits) - 1ULL) << offset;
 	}
 
 	constexpr uint32_t CountLeadingZeros(uint32_t value)
@@ -67,6 +67,42 @@ namespace Bits
 	constexpr uint32_t GetMostSignificantBitIndex(uint64_t value)
 	{
 		return 63 - CountLeadingZeros64(value);
+	}
+
+	inline void GetContiguousBitsLSB64(uint64_t bits, uint32_t& outIndex, uint32_t& outCount)
+	{
+		uint32_t bitTrz = CountTrailingZeros64(bits);
+		uint64_t shifted = ~(bits >> bitTrz);
+		uint32_t bitTrzEnd = CountTrailingZeros64(shifted);
+		outIndex = bitTrz;
+		outCount = bitTrzEnd;
+	}
+
+	inline void GetContiguousBitsLSB(uint32_t bits, uint32_t& outIndex, uint32_t& outCount)
+	{
+		uint32_t bitTrz = CountTrailingZeros(bits);
+		uint32_t shifted = ~(bits >> bitTrz);
+		uint32_t bitTrzEnd = CountTrailingZeros(shifted);
+		outIndex = bitTrz;
+		outCount = bitTrzEnd;
+	}
+
+	inline void GetContiguousBitsMSB64(uint64_t bits, uint32_t& outIndex, uint32_t& outCount)
+	{
+		uint32_t bitTrz = CountLeadingZeros64(bits);
+		uint64_t shifted = ~(bits << bitTrz);
+		uint32_t bitTrzEnd = CountLeadingZeros64(shifted);
+		outIndex = bitTrz;
+		outCount = bitTrzEnd;
+	}
+
+	inline void GetContiguousBitsMSB(uint32_t bits, uint32_t& outIndex, uint32_t& outCount)
+	{
+		uint32_t bitTrz = CountLeadingZeros(bits);
+		uint32_t shifted = ~(bits << bitTrz);
+		uint32_t bitTrzEnd = CountLeadingZeros(shifted);
+		outIndex = bitTrz;
+		outCount = bitTrzEnd;
 	}
 
 } // Bits

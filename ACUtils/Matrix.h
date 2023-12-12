@@ -9,6 +9,7 @@ struct alignas(16) Matrix4x4
 {
 public:
 	Matrix4x4();
+	Matrix4x4(const Vec4& row0, const Vec4& row1, const Vec4& row2, const Vec4& row3);
 	Matrix4x4(float x, float y, float z); // Translation, scale is 1, rotation is 0.
 	Matrix4x4(float x, float y, float z, float yaw, float pitch, float roll);
 	Matrix4x4(float x, float y, float z, float yaw, float pitch, float roll, float scaleX, float scaleY, float scaleZ);

@@ -81,7 +81,8 @@ namespace Memory
 		Ringbuffer(size_t sizeInBytes, OnWrapAroundFunc wrapCallback = nullptr)
 		: m_memory(nullptr),
 		m_totalSize(sizeInBytes),
-		m_offset(0ULL)
+		m_offset(0ULL),
+		m_wrapCallback(wrapCallback)
 		{
 			m_memory = (char*)malloc(m_totalSize);
 			assert(m_memory);
