@@ -116,7 +116,7 @@ public:
 	void RequestExit(bool exit);
 	void OnKeyAction(struct GLFWwindow* window, int key, int scancode, int action, int mods);
 
-	void Log(const char* fmt, ...)
+	void Log(const char* fmt, ...) const
 	{
 		char appendedLog[1024] = { 0 };
 		va_list args;
