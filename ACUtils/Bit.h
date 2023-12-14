@@ -51,12 +51,12 @@ namespace Bits
 
 	constexpr uint32_t GetLeastSignificantBitIndex(uint32_t value)
 	{
-		return CountTrailingZeros(value) - 1;
+		return CountTrailingZeros(value);
 	}
 
 	constexpr uint64_t GetLeastSignificanBitIndex(uint64_t value)
 	{
-		return CountTrailingZeros64(value) - 1;
+		return CountTrailingZeros64(value);
 	}
 
 	constexpr uint32_t GetMostSignificantBitIndex(uint32_t value)
@@ -106,3 +106,226 @@ namespace Bits
 	}
 
 } // Bits
+
+
+class Bitfield128
+{
+public:
+	Bitfield128() : bitfield{ 0ULL, 0ULL } {}
+	Bitfield128(uint64_t low, uint64_t high)
+		: bitfield{ low, high }
+	{
+	}
+
+	bool IsZero() const { return bitfield[0] == 0ULL && bitfield[1] == 0ULL; }
+
+	uint32_t PopCount() const
+	{
+		return Bits::PopCount64(bitfield[0]) + Bits::PopCount64(bitfield[1]);
+	}
+
+	uint32_t ExtractLSB() const
+	{
+		if (bitfield[0])
+		{
+			return Bits::CountTrailingZeros64(bitfield[0]);
+		}
+
+		if (bitfield[1])
+		{
+			return 64 + Bits::CountTrailingZeros64(bitfield[1]);
+		}
+
+		return 128;
+	}
+
+	uint32_t ExtractMSB() const
+	{
+		if (bitfield[1])
+		{
+			return 64 + Bits::CountLeadingZeros64(bitfield[1]);
+		}
+
+		if (bitfield[0])
+		{
+			return Bits::CountLeadingZeros64(bitfield[0]);
+		}
+
+		return 128;
+	}
+
+	void SetBit(uint32_t index)
+	{
+		bitfield[index / 64] |= 1ULL << (index % 64);
+	}
+
+	void ClearBit(uint32_t index)
+	{
+		bitfield[index / 64] &= ~(1ULL << (index % 64));
+	}
+
+	bool IsBitSet(uint32_t index) const
+	{
+		return (bitfield[index / 64] & (1ULL << (index % 64))) != 0;
+	}
+
+	static Bitfield128 BuildMask(uint32_t startIndex, uint32_t count)
+	{
+		uint64_t lowMask = 0;
+		uint64_t highMask = 0;
+
+		if (startIndex < 64)
+		{
+			if (startIndex + count > 64)
+			{
+				// Straddles barrier
+				lowMask = Bits::CreateBitMask64(startIndex, 64 - startIndex);
+				highMask = Bits::CreateBitMask64(0, count - (64 - startIndex));
+			}
+			else
+			{
+				lowMask = Bits::CreateBitMask64(startIndex, count);
+			}
+		}
+		else
+		{
+			highMask = Bits::CreateBitMask64(startIndex % 64, count);
+		}
+
+		return Bitfield128(lowMask, highMask);
+	}
+
+	static void ExtractContiguousBitsLSB(const Bitfield128& bitfield, uint32_t& outIndex, uint32_t& outCount)
+	{
+		uint32_t bitRange = 128;
+		if (bitfield.GetLow())
+		{
+			Bits::GetContiguousBitsLSB64(bitfield.GetLow(), outIndex, outCount);
+
+			if (outIndex + outCount == 64)
+			{
+				uint32_t highIndex = 0;
+				uint32_t highNumBits = 0;
+
+				Bits::GetContiguousBitsLSB64(bitfield.GetHigh(), highIndex, highNumBits);
+				if (highIndex == 0)
+				{
+					outCount += highNumBits;
+				}
+			}
+		}
+		else if (bitfield.GetHigh())
+		{
+			Bits::GetContiguousBitsLSB64(bitfield.GetHigh(), outIndex, outCount);
+			outIndex += 64;
+		}
+	}
+
+	static uint32_t CountLeadingZeros(const Bitfield128& bitfield)
+	{
+		if (bitfield.GetHigh() == 0)
+		{
+			return 64 + Bits::CountLeadingZeros64(bitfield.GetLow());
+		}
+
+		return Bits::CountLeadingZeros64(bitfield.GetHigh());
+	}
+
+	static uint32_t CountTrailingZeros(const Bitfield128& bitfield)
+	{
+		if (bitfield.GetLow() == 0)
+		{
+			return 64 + Bits::CountTrailingZeros64(bitfield.GetHigh());
+		}
+
+		return Bits::CountTrailingZeros64(bitfield.GetHigh());
+	}
+
+	bool operator==(const Bitfield128& RHS) const
+	{
+		return GetLow() == RHS.GetLow() && GetHigh() == RHS.GetHigh();
+	}
+
+	bool operator!=(const Bitfield128& RHS) const
+	{
+		return GetLow() != RHS.GetLow() || GetHigh() != RHS.GetHigh();
+	}
+
+	Bitfield128& operator<<=(size_t pos)
+	{
+		uint64_t overflowMask = bitfield[0] >> (64 - pos);
+		bitfield[0] <<= pos;
+		bitfield[1] <<= pos;
+		bitfield[1] |= overflowMask;
+
+		return *this;
+	}
+
+	Bitfield128 operator<<(size_t pos) const
+	{
+		uint64_t overflowMask = bitfield[0] >> (64 - pos);
+		return Bitfield128(bitfield[0] << pos, (bitfield[1] << pos) | overflowMask);
+	}
+
+	Bitfield128& operator>>=(size_t pos)
+	{
+		uint64_t underflowMask = bitfield[1] & ((1 << pos) - 1);
+		bitfield[1] >>= pos;
+		bitfield[0] >>= pos;
+		bitfield[0] |= (underflowMask << (64 - pos));
+
+		return *this;
+	}
+
+	Bitfield128 operator>>(size_t pos) const
+	{
+		uint64_t underflowMask = bitfield[1] & ((1 << pos) - 1);
+		return Bitfield128((bitfield[0] >> pos) | (underflowMask << (64 - pos)), bitfield[1] >> pos);
+	}
+
+	Bitfield128& operator|=(const Bitfield128& RHS)
+	{
+		bitfield[0] |= RHS.bitfield[0];
+		bitfield[1] |= RHS.bitfield[1];
+		return *this;
+	}
+
+	Bitfield128 operator|(const Bitfield128& RHS) const
+	{
+		return Bitfield128(bitfield[0] | RHS.bitfield[0], bitfield[1] | RHS.bitfield[1]);
+	}
+
+	Bitfield128& operator&=(const Bitfield128& RHS)
+	{
+		bitfield[0] &= RHS.bitfield[0];
+		bitfield[1] &= RHS.bitfield[1];
+		return *this;
+	}
+
+	Bitfield128 operator&(const Bitfield128& RHS) const
+	{
+		return Bitfield128(bitfield[0] & RHS.bitfield[0], bitfield[1] & RHS.bitfield[1]);
+	}
+
+	Bitfield128& operator^=(const Bitfield128& RHS)
+	{
+		bitfield[0] ^= RHS.bitfield[0];
+		bitfield[1] ^= RHS.bitfield[1];
+		return *this;
+	}
+
+	Bitfield128 operator^(const Bitfield128& RHS)
+	{
+		return Bitfield128(bitfield[0] ^ RHS.bitfield[0], bitfield[1] ^ RHS.bitfield[1]);
+	}
+
+	Bitfield128 operator~() const
+	{
+		return Bitfield128(~bitfield[0], ~bitfield[1]);
+	}
+
+	uint64_t GetLow() const { return bitfield[0]; }
+	uint64_t GetHigh() const { return bitfield[1]; }
+private:
+	uint64_t bitfield[2];
+};

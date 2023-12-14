@@ -70,6 +70,7 @@ private:
 			foundReflection = FindReflectionIndex(currentMap, outIndex, outDistance);
 			Log("Map [%u x %u] Index %u Distance %u Orientation %s", currentMap.width, currentMap.height, outIndex, outDistance, foundReflection == EReflectionType::Horizontal ? "Horizontal" : "Vertical");
 			assert(foundReflection != EReflectionType::None);
+			m_PartOneHistory.push_back(outIndex);
 			totalScore += outDistance * multiplier[static_cast<uint8_t>(foundReflection)];
 		}
 
@@ -206,6 +207,11 @@ private:
 					}
 				}
 
+				if (fixSmudge && hasSmudge)
+				{
+					valid = false;
+				}
+
 				if (valid)
 				{
 					outIndex = i;
@@ -240,6 +246,11 @@ private:
 					}
 				}
 
+				if (fixSmudge && hasSmudge)
+				{
+					valid = false;
+				}
+
 				if (valid)
 				{
 					outIndex = i;
@@ -253,6 +264,7 @@ private:
 	}
 
 	std::vector<Map> m_Maps; 
+	std::vector<uint32_t> m_PartOneHistory;
 };
 
 int main()
