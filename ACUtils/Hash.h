@@ -45,12 +45,12 @@ namespace Hash
 	}
 
 	// Simple version that uses uint64's for our hashes.
-	inline void HashCombineU64(uint64_t& seed, uint64_t const& v) {
-		seed ^= (v + 0x9e3779b9 + (seed << 6) + (seed >> 2));
+	inline uint64_t HashCombineU64(uint64_t seed, uint64_t const& v) {
+		return seed ^ (v + 0x9e3779b9 + (seed << 6) + (seed >> 2));;
 	}
 
-	inline void HashCombineSize(size_t& seed, size_t const& v) {
-		seed ^= (v + 0x9e3779b9 + (seed << 6) + (seed >> 2));
+	inline size_t HashCombineSize(size_t seed, size_t const& v) {
+		return seed ^ (v + 0x9e3779b9 + (seed << 6) + (seed >> 2));
 	}
 
 	namespace FNV1A

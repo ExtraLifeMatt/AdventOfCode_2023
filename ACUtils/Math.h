@@ -59,6 +59,7 @@ namespace Math
 	int32_t EstimatePrimeNumbersInRange(int32_t UpperLimit);
 	void PrimeFactorization32(uint32_t value, std::vector<uint32_t>& outFactors);
 	bool IsPrime(uint32_t WholeNumber);
+	constexpr uint32_t GetNthPrime(uint32_t Index);
 
 	// Finds all the primes
 	void GeneratePrimeNumbers(int32_t UpperLimit, std::vector<int32_t>& outPrimes); // Finds all the primes between 2 - UpperLimit
