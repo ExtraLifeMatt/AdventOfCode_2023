@@ -4,6 +4,7 @@
 #include "AdventGUI/AdventGUI.h"
 
 #include "ACUtils/Bit.h"
+#include "ACUtils/Hash.h"
 #include "ACUtils/Math.h"
 #include "ACUtils/StringUtil.h"
 #include <vector>
@@ -87,61 +88,9 @@ private:
 				}
 			}
 			break;
-			case Direction::East:
-			{
-				// MSB = East
-				uint32_t segmentStart = 127;
-				uint32_t segmentEnd = 0;
-				Bitfield128 rockIter;
-				for (uint32_t i = 0; i < currentDishes.size(); ++i)
-				{
-					shiftedBits = currentDishes[i];
-					rockIter = rocks[i];
-					
-					rockIter &= ~Bits::CreateBitMask128(mapWidth, 128 - mapWidth);
-	
-					if (rockIter.IsZero())
-					{
-						// Easy case, everyone gets moved to the front.
-						uint32_t totalBits = Bits::PopCount128(shiftedBits);
-						outTilted[i] = Bits::CreateBitMask128(128 - totalBits, totalBits);
-					}
-					else
-					{
-						uint32_t currentOffset = 128;
-						while (!rockIter.IsZero())
-						{
-
-							segmentStart = Bits::GetMostSignificantBitIndex(rockIter);
-							rockIter <<= segmentStart;
-							segmentEnd = Bits::GetMostSignificantBitIndex(rockIter);
-
-							Bitfield128 moveMask = Bits::CreateBitMask128(segmentEnd, segmentStart - segmentEnd);
-
-							Bitfield128 toggledBits = shiftedBits & moveMask;
-							uint32_t totalBits = Bits::PopCount128(toggledBits);
-							shiftedBits &= ~toggledBits;
-							shiftedBits |= Bits::CreateBitMask128(currentOffset, totalBits);
-							currentOffset -= (segmentStart - segmentEnd);
-						}
-					}
-				}
-			}
-			break;
-			case Direction::South:
-			{
-				for (uint32_t i = 0; i < currentDishes.size() - 1; ++i)
-				{
-					// Shift up as down as possible
-					shiftedBits = (outTilted[i] ^ outTilted[i + 1]) & ~rocks[i + 1];
-					outTilted[i] &= ~shiftedBits;
-					outTilted[i + 1] |= shiftedBits;
-				}
-			}
-			break;
 			case Direction::West:
 			{
-				// LSB = West
+				// MSB = West
 				uint32_t segmentStart = 0;
 				uint32_t segmentSize = 127;
 				Bitfield128 rockIter;
@@ -162,11 +111,56 @@ private:
 						Bitfield128 toggledBits = shiftedBits & moveMask;
 						uint32_t totalBits = Bits::PopCount128(toggledBits);
 						shiftedBits &= ~toggledBits;
-						shiftedBits |= Bits::CreateBitMask128(segmentStart + segmentSize - totalBits, totalBits);
+						shiftedBits |= Bits::CreateBitMask128(segmentStart, totalBits);
 						rockIter.ClearBit(segmentStart);
 					}
 
+					outTilted[i] = shiftedBits;
+				}
+			
+			}
+			break;
+			case Direction::South:
+			{
+				for (uint32_t i = (uint32_t)currentDishes.size() - 1; i != ~0U ; --i)
+				{
+					for (uint32_t j = i; j < currentDishes.size() - 1; ++j)
+					{
+						// Shift up as far as possible
+						shiftedBits = (outTilted[j] ^ outTilted[j + 1]) & ~rocks[j + 1];
+						outTilted[j] &= ~shiftedBits;
+						outTilted[j + 1] |= shiftedBits;
+					}
+				}
+			}
+			break;
+			case Direction::East:
+			{
+				uint32_t segmentStart = 0;
+				uint32_t segmentSize = 0;
+				Bitfield128 rockIter;
+				for (uint32_t i = 0; i < currentDishes.size(); ++i)
+				{
+					shiftedBits = currentDishes[i];
+					rockIter = ~rocks[i];
 
+					while (!rockIter.IsZero())
+					{
+						Bits::GetContiguousBitsLSB128(rockIter, segmentStart, segmentSize);
+						if (segmentStart >= mapWidth)
+						{
+							break; // Done.
+						}
+
+						Bitfield128 moveMask = Bits::CreateBitMask128(segmentStart, segmentSize);
+						Bitfield128 toggledBits = shiftedBits & moveMask;
+						uint32_t totalBits = Bits::PopCount128(toggledBits);
+						shiftedBits &= ~toggledBits;
+						shiftedBits |= Bits::CreateBitMask128( segmentStart + segmentSize - totalBits, totalBits);
+						rockIter.ClearBit(segmentStart);
+					}
+
+					outTilted[i] = shiftedBits; 
 				}
 			}
 			default:
@@ -188,14 +182,8 @@ private:
 	virtual void PartOne(const AdventGUIContext& context) override
 	{
 		// Part One
-		Log("Pre-Tilt.");
-		PrintMap(m_Dishes, m_Rocks);
-
 		std::vector<Bitfield128> shiftedRocks;
-		Tilt(m_Dishes, m_Rocks, Direction::West, m_MapWidth, shiftedRocks);
-
-		Log("Post-Tilt.");
-		PrintMap(shiftedRocks, m_Rocks);
+		Tilt(m_Dishes, m_Rocks, Direction::North, m_MapWidth, shiftedRocks);
 
 		uint32_t totalScore = ScoreDishes(shiftedRocks);
 
@@ -248,7 +236,8 @@ private:
 			uint32_t primeIndex = 1;
 			for (const Bitfield128& bits : record)
 			{
-				hash += Bits::PopCount128(bits) * Math::GetNthPrime(primeIndex++);
+				hash = Hash::HashCombineU64(hash, bits.GetLow());
+				hash = Hash::HashCombineU64(hash, bits.GetHigh());
 			}
 		};
 
@@ -311,49 +300,52 @@ private:
 
 		Direction dirs[] = { Direction::North, Direction::West, Direction::South, Direction::East };
 
-		std::vector<Bitfield128> currentRecord = m_Dishes;
-		allRecords.emplace_back(currentRecord);
+		std::vector<Bitfield128> pingPong[2] = { m_Dishes, m_Dishes };
+		uint32_t pingPongIndex = 0;
+
+		allRecords.reserve(1024);
+		allRecords.emplace_back(m_Dishes);
 		uniqueRecords.insert(allRecords.back());
 
-		for (size_t i = 0; i < 1000000000; ++i)
+		constexpr size_t totalIters = 1000000000;
+
+		for (size_t i = 0; i < totalIters; ++i)
 		{
 			for (Direction dir : dirs)
 			{
-				Tilt(allRecords.back().record, m_Rocks, dir, m_MapWidth, currentRecord);
+				Tilt(pingPong[pingPongIndex], m_Rocks, dir, m_MapWidth, pingPong[pingPongIndex ^ 1]);
+				pingPongIndex ^= 1;
 			}
-			allRecords.emplace_back(currentRecord);
 
-			if (allRecords[allRecords.size() - 2] == allRecords.back())
+			CycleRecord newRecord(pingPong[pingPongIndex]);
+
+			// Looping?
+			std::unordered_set<CycleRecord, CycleRecordHasher>::iterator itFind = uniqueRecords.find(newRecord);
+			if ( itFind == uniqueRecords.end())
 			{
-				// Stable
+				uniqueRecords.insert(newRecord);
+			}
+			else
+			{
+				assert(*itFind == newRecord);
+				size_t lastSeen = std::find(allRecords.begin(), allRecords.end(), newRecord) - allRecords.begin();
+				size_t cycleLength = allRecords.size() - lastSeen;
+				Log("Found loop on iteration %zd, length is %zd", i, cycleLength);
+				i = totalIters - (totalIters - i) % cycleLength;
 				break;
 			}
 
-			// Looping?
-			if (uniqueRecords.find(allRecords.back()) != uniqueRecords.end())
-			{
-				 const std::reverse_iterator<std::vector<CycleRecord>::const_iterator> itRev = allRecords.rbegin();
-				 while (itRev != allRecords.rend())
-				 {
-					 if ((*itRev) == allRecords.back())
-					 {
-						size_t loopDistance = allRecords.rend() - itRev;
-						Log("Loop Detected for Record %" PRIu64 ".Last Record was % zd records ago.", allRecords.back().hash, loopDistance);
-						break;
-					 }
-				 }
-			}
+			allRecords.push_back(newRecord);
 		}
 
-		Tilt(allRecords.back().record, m_Rocks, Direction::North, m_MapWidth, currentRecord);
-		
-		uint32_t totalScore = ScoreDishes(currentRecord);
+		uint32_t totalScore = ScoreDishes(allRecords.back().record);
 
 		Log("Total Score after spin cycle: %u", totalScore);
 
-
 		// Done.
 		AdventGUIInstance::PartTwo(context);
+
+
 	}
 
 	std::vector<Bitfield128> m_Dishes;
@@ -367,7 +359,7 @@ int main()
 	newParams.day = 14;
 	newParams.year = 2023;
 	newParams.puzzleTitle = "Parabolic Reflector Dish";
-	newParams.inputFilename = "sample.txt";
+	newParams.inputFilename = "input.txt";
 
 	AdventGUIInstance::InstantiateAndExecute<AdventDay>(newParams);
 

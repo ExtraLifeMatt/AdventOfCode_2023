@@ -335,24 +335,24 @@ namespace Bits
 		if (bits.GetHigh())
 		{
 			Bits::GetContiguousBitsMSB64(bits.GetHigh(), outIndex, outCount);
-
+			outIndex = 128 - outIndex;
 			if (outIndex - outCount == 0)
 			{
 				uint32_t lowIndex = 0;
 				uint32_t lowNumBits = 0;
 
 				Bits::GetContiguousBitsMSB64(bits.GetLow(), lowIndex, lowNumBits);
+				outCount = 64 - outIndex;
 				if (lowIndex == 64)
 				{
 					outCount += lowNumBits;
 				}
 			}
-
-			outIndex += 64;
 		}
 		else if (bits.GetLow())
 		{
-			Bits::GetContiguousBitsLSB64(bits.GetLow(), outIndex, outCount);
+			Bits::GetContiguousBitsMSB64(bits.GetLow(), outIndex, outCount);
+			outIndex = 64 - outIndex;
 		}
 	}
 } // Bits
