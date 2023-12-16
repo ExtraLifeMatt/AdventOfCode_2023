@@ -46,6 +46,8 @@ void AdventGUIInstance::RequestExit(bool exit)
 
 void AdventGUIInstance::OnKeyAction(struct GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+	//ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+
 	if (window != m_appWindow)
 	{
 		return;
