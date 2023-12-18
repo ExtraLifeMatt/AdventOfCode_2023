@@ -127,6 +127,14 @@ public:
 		AdventGUIConsole::Get().Log("[%8f] %s", m_appLifetime, appendedLog);
 	}
 
+	void VLog(const char* fmt, va_list args) const
+	{
+		char appendedLog[1024] = { 0 };
+		vsprintf_s(appendedLog, 1024, fmt, args);
+
+		AdventGUIConsole::Get().Log("[%8f] %s", m_appLifetime, appendedLog);
+	}
+
 	const char* GetInputFileName() const { return m_params.inputFilename; }
 	Memory::LinearAllocator& GetImGuiFrameAllocator() { return m_imguiFrameAllocator; } 
 

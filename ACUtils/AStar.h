@@ -167,11 +167,24 @@ namespace AStar
 		}
 	};
 
+	typedef void (*AStarLogger)(const char* fmt, va_list args);
+	
 	template<typename T, class ComparePred = AStarNodeHashCompare<T> >
 	class AStarExecuter
 	{
 	public:
-		AStarExecuter() { m_openList.reserve(DEFAULT_RESERVE_SIZE); m_closedList.reserve(DEFAULT_RESERVE_SIZE * CLOSED_LIST_SIZE_MULTIPLER); }
+		AStarExecuter(AStarLogger logger = nullptr): m_logger(logger) { m_openList.reserve(DEFAULT_RESERVE_SIZE); m_closedList.reserve(DEFAULT_RESERVE_SIZE * CLOSED_LIST_SIZE_MULTIPLER); }
+
+		void Log(const char* fmt, ...)
+		{
+			if (m_logger)
+			{
+				va_list args;
+				va_start(args, fmt);
+				(*m_logger)(fmt, args);
+				va_end(args);
+			}
+		}
 
 		virtual void OnProcessNode(AStarNodeBase<T>& CurrentNode) { };
 		bool Solve(const AStarNodeBase<T>*& OutPath)
@@ -278,5 +291,6 @@ namespace AStar
 		typedef std::vector<AStarNodeBase<T>*> NodeList;
 		NodeList m_openList;
 		std::unordered_set<AStarNodeBase<T>*, AStarNodeBaseHasher<T>, ComparePred> m_closedList;
+		AStarLogger m_logger;
 	};
 }
