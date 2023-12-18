@@ -1,0 +1,168 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="ACUtils">
+      <UniqueIdentifier>{fc8e8509-bb83-4cd1-bb4d-7c79fb89428d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="AdventGUI">
+      <UniqueIdentifier>{6b5511ec-150d-4d8a-a5e9-d17afeeec06c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty">
+      <UniqueIdentifier>{b952bc33-2c09-4100-bac3-c182c7bd2664}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\imgui">
+      <UniqueIdentifier>{c982e595-1821-4a1d-acac-a1ce59b6bcdc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\stb">
+      <UniqueIdentifier>{f1a22459-3e36-4c55-b004-d2684d021f23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thirdparty\glfw">
+      <UniqueIdentifier>{8a066263-0ef9-4984-898a-06ebe31cd691}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\ACUtils\Debug.cpp">
+      <Filter>ACUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ACUtils\IntVec.cpp">
+      <Filter>ACUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ACUtils\Math.cpp">
+      <Filter>ACUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ACUtils\StringUtil.cpp">
+      <Filter>ACUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ACUtils\Vec.cpp">
+      <Filter>ACUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\AdventGUI\AdventGUI.cpp">
+      <Filter>AdventGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\AdventGUI\AdventGUIConsole.cpp">
+      <Filter>AdventGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\imgui\imgui.cpp">
+      <Filter>thirdparty\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\imgui\imgui_demo.cpp">
+      <Filter>thirdparty\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\imgui\imgui_draw.cpp">
+      <Filter>thirdparty\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\imgui\imgui_tables.cpp">
+      <Filter>thirdparty\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\imgui\imgui_widgets.cpp">
+      <Filter>thirdparty\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\imgui\backends\imgui_impl_glfw.cpp">
+      <Filter>thirdparty\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\thirdparty\imgui\backends\imgui_impl_opengl3.cpp">
+      <Filter>thirdparty\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\ACUtils\AABB.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Algorithm.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\AStar.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\BDFS.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Bit.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Debug.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Enum.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\FileStream.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Hash.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\IncludeAll.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\IntVec.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Math.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Memory.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\StringUtil.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ACUtils\Vec.h">
+      <Filter>ACUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\AdventGUI\AdventGUI.h">
+      <Filter>AdventGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\AdventGUI\AdventGUIConsole.h">
+      <Filter>AdventGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\imgui\imconfig.h">
+      <Filter>thirdparty\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\imgui\imgui.h">
+      <Filter>thirdparty\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\imgui\imgui_internal.h">
+      <Filter>thirdparty\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\imgui\imstb_rectpack.h">
+      <Filter>thirdparty\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\imgui\imstb_textedit.h">
+      <Filter>thirdparty\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\imgui\imstb_truetype.h">
+      <Filter>thirdparty\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\imgui\backends\imgui_impl_glfw.h">
+      <Filter>thirdparty\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\imgui\backends\imgui_impl_opengl3.h">
+      <Filter>thirdparty\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\stb\stb_image.h">
+      <Filter>thirdparty\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\glfw\include\GLFW\glfw3.h">
+      <Filter>thirdparty\glfw</Filter>
+    </ClInclude>
+    <ClInclude Include="..\thirdparty\glfw\include\GLFW\glfw3native.h">
+      <Filter>thirdparty\glfw</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

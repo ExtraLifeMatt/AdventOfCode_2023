@@ -14,6 +14,7 @@ const IntVec4 IntVec4::UnitY = IntVec4(0, 1, 0, 0);
 const IntVec4 IntVec4::UnitZ = IntVec4(0, 0, 1, 0);
 const IntVec4 IntVec4::UnitW = IntVec4(0, 0, 0, 1);
 const IntVec4 IntVec4::Zero = IntVec4(0);
+const Int64Vec2 Int64Vec2::Zero = Int64Vec2(0LL);
 
 bool IntVec2::operator!=(const IntVec2& RHS) const
 {
