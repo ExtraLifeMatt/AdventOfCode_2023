@@ -711,7 +711,7 @@ IntVec4::IntVec4() : x(0), y(0), z(0), w(0)
 
 }
 
-IntVec4::IntVec4(int32_t xyz) : x(xyz), y(xyz), z(xyz), w(0)
+IntVec4::IntVec4(int32_t xyzw) : x(xyzw), y(xyzw), z(xyzw), w(xyzw)
 {
 
 }

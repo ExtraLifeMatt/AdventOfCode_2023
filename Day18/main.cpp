@@ -177,7 +177,6 @@ private:
 		AdventGUIInstance::PartOne(context);
 	}
 
-
 	virtual void PartTwo(const AdventGUIContext& context) override
 	{	
 		// Part Two
