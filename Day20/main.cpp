@@ -289,14 +289,12 @@ private:
 		int32_t rxModuleIndex = Algorithm::find_index_of(m_Modules.begin(), m_Modules.end(), GetModuleByNamePred("rx"));
 		assert(rxModuleIndex != -1);
 
-
-	
 		const Capture* rxModule = m_Modules[rxModuleIndex]->GetAs<Capture>();
 		uint32_t totalButtonPresses = 0;
 
 		uint32_t lastUpdateValueForConj[4] = { 0 };
 		uint32_t buttonPressesForConj[4] = { 0 };
-		const char* conjModuleNames[] = {"kd", "zf", "vg", "gs"};
+		const char* conjModuleNames[] = {"kd", "zf", "vg", "gs"}; // Found by looking at the RX module inputs (1 conj, which has inputs from 4 conj, these guys).
 		bool stableNumbers[4] = { false }; 
 		const Conjunction* watchModules[4] = { nullptr };
 
@@ -328,6 +326,7 @@ private:
 
 				for (uint32_t i = 0; i < ARRAY_SIZE(watchModules); ++i)
 				{
+					// Update the conjunction modules we're watching.
 					if (currentSignal.Source == watchModules[i] && currentSignal.Signal == ElfSignal::ES_High)
 					{
 						Log("Conjunction Module %s sent a High signal on press [%u] step [%u]", currentSignal.Source->GetName().c_str(), totalButtonPresses, totalSignalsSent);
@@ -337,6 +336,7 @@ private:
 						stableNumbers[i] = oldValue == buttonPressesForConj[i];
 						lastUpdateValueForConj[i] = totalButtonPresses;
 
+						// If we have stable numbers for all 4, we can stop.
 						canBreak = true;
 						for (uint32_t j = 0; j < 4; ++j)
 						{
