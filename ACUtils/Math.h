@@ -53,6 +53,11 @@ namespace Math
 		return pow == 0 ? 1 : base * Pow(base, pow - 1);
 	}
 
+	constexpr uint32_t Exp(const uint32_t value, uint32_t pow)
+	{
+		return value < pow ? 0 : 1 + Exp(value / pow, pow);
+	}
+
 	uint64_t LCM(uint64_t a, uint64_t b);
 	uint64_t GCD(uint64_t a, uint64_t b);
 

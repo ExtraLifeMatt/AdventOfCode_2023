@@ -39,7 +39,7 @@ public:
 
 	const Vec3& GetMin() const { return Min; }
 	const Vec3& GetMax() const { return Max; }
-	Vec3 GetCenter() const { return (Max - Min) / 2; }
+	Vec3 GetCenter() const { return Min + (Max - Min) / 2; }
 	Vec3 GetSize() const { return Max - Min; }
 
 	bool Contains(const Vec3& Pos) const
@@ -110,7 +110,7 @@ public:
 
 	const IntVec3& GetMin() const { return Min; }
 	const IntVec3& GetMax() const { return Max; }
-	IntVec3 GetCenter() const { return (Max - Min) / 2; }
+	IntVec3 GetCenter() const { return Min + (Max - Min) / 2; }
 	IntVec3 GetSize() const { return Max - Min; }
 
 	bool Contains(const IntVec3& Pos) const
@@ -193,6 +193,7 @@ public:
 	{
 		return IntAABB2D(Center - Extents, Center + Extents);
 	}
+
 private:
 	IntVec2 Min;
 	IntVec2 Max;

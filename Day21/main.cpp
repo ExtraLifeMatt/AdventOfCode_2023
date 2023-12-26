@@ -70,7 +70,7 @@ private:
 
 	bool IsValidPosInf(const IntVec2& pos) const
 	{
-		// This is dumb, not sure why it has to be this way.
+		// Handle wrap around
 		int yTest = pos.y;
 		int xTest = pos.x;
 

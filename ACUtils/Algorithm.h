@@ -43,6 +43,21 @@ namespace Algorithm
 		return -1;
 	}
 
+	template<class It, class Pred>
+	std::vector<int32_t> find_all_indices(It first, It last, Pred predicate)
+	{
+		std::vector<int32_t> out;
+		for (It Iter = first; Iter != last; ++Iter)
+		{
+			if (predicate(*Iter))
+			{
+				out.push_back((int32_t)(Iter - first));
+			}
+		}
+
+		return out;
+	}
+
 	template<class It, class Pred, class ExecPred>
 	void for_each_if(It first, It last, Pred ifPredicate, ExecPred execPredicate)
 	{
