@@ -110,6 +110,57 @@ public:
 	int64_t y;
 };
 
+struct Int64Vec3
+{
+public:
+	Int64Vec3();
+	Int64Vec3(int64_t xyz);
+	Int64Vec3(int64_t _x, int64_t _y, int64_t _z);
+	Int64Vec3(const Vec3& vec);
+
+	static const Int64Vec3 UnitX;
+	static const Int64Vec3 UnitY;
+	static const Int64Vec3 Zero;
+
+	bool IsZero() const;
+	double Length() const;
+	uint64_t LengthSqr() const;
+
+	size_t ToHash() const;
+
+	Int64Vec3 operator+(const Int64Vec3& RHS) const;
+	Int64Vec3 operator-(const Int64Vec3& RHS) const;
+	Int64Vec3 operator*(int64_t scalar) const;
+	Int64Vec3 operator/(int64_t scalar) const;
+	Int64Vec3& operator+=(const Int64Vec3& RHS);
+	Int64Vec3& operator-=(const Int64Vec3& RHS);
+	Int64Vec3& operator*=(int64_t scalar);
+	Int64Vec3& operator/=(int64_t scalar);
+	int64_t& operator[](int i);
+	int64_t operator[](int i) const;
+	bool operator==(const Int64Vec3& RHS) const;
+	bool operator!=(const Int64Vec3& RHS) const;
+
+	bool AllLessThan(const Int64Vec3& RHS) const;
+	bool AnyLessThan(const Int64Vec3& RHS) const;
+	bool AllLessThanOrEqual(const Int64Vec3& RHS) const;
+	bool AnyLessThanOrEqual(const Int64Vec3& RHS) const;
+	bool AllGreaterThan(const Int64Vec3& RHS) const;
+	bool AnyGreaterThan(const Int64Vec3& RHS) const;
+	bool AllGreaterThanOrEqual(const Int64Vec3& RHS) const;
+	bool AnyGreaterThanOrEqual(const Int64Vec3& RHS) const;
+
+	Vec3 Normalize() const;
+	Int64Vec3 RotateByDegrees(float degrees) const;
+	Int64Vec3 RotateByRadians(float radians) const;
+	Int64Vec3 PerComponentMin(const Int64Vec3& RHS) const;
+	Int64Vec3 PerComponentMax(const Int64Vec3& RHS) const;
+
+	int64_t x;
+	int64_t y;
+	int64_t z;
+};
+
 struct alignas(16) IntVec3
 {
 public:
@@ -232,6 +283,7 @@ public:
 
 
 ENABLE_STL_HASH(Int64Vec2, ToHash);
+ENABLE_STL_HASH(Int64Vec3, ToHash);
 ENABLE_STL_HASH(IntVec3, ToHash);
 ENABLE_STL_HASH(IntVec2, ToHash);
 ENABLE_STL_HASH(IntVec4, ToHash);

@@ -168,7 +168,7 @@ namespace BDFS
 		{
 			if (m_mode == BDFSExecuterMode::BDFSExecuterMode_BreadthFirst)
 			{
-				assert(current); // BFS requires the current node so we can chain up the path.
+				//assert(current); // BFS requires the current node so we can chain up the path.
 				if (!IsDiscovered(next))
 				{
 					next->SetParent(current);

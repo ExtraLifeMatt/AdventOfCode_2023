@@ -15,6 +15,7 @@ const IntVec4 IntVec4::UnitZ = IntVec4(0, 0, 1, 0);
 const IntVec4 IntVec4::UnitW = IntVec4(0, 0, 0, 1);
 const IntVec4 IntVec4::Zero = IntVec4(0);
 const Int64Vec2 Int64Vec2::Zero = Int64Vec2(0LL);
+const Int64Vec3 Int64Vec3::Zero = Int64Vec3(0LL);
 
 bool IntVec2::operator!=(const IntVec2& RHS) const
 {
@@ -414,6 +415,210 @@ Int64Vec2 Int64Vec2::PerComponentMin(const Int64Vec2& RHS) const
 Int64Vec2 Int64Vec2::PerComponentMax(const Int64Vec2& RHS) const
 {
 	return Int64Vec2(std::max(x, RHS.x), std::max(y, RHS.y));
+}
+
+
+bool Int64Vec3::operator!=(const Int64Vec3 & RHS) const
+{
+	return x != RHS.x || y != RHS.y || z != RHS.z;
+}
+
+bool Int64Vec3::operator==(const Int64Vec3 & RHS) const
+{
+	return x == RHS.x && y == RHS.y && z == RHS.z;
+}
+
+Int64Vec3& Int64Vec3::operator/=(int64_t scalar)
+{
+	x /= scalar;
+	y /= scalar;
+	z /= scalar;
+
+	return *this;
+}
+
+Int64Vec3::Int64Vec3(const Vec3& vec) : x(Math::FloorToInt32(vec.x)), y(Math::FloorToInt32(vec.y)), z(Math::FloorToInt32(vec.z))
+{
+
+}
+
+Int64Vec3::Int64Vec3() : x(0), y(0), z(0)
+{
+
+}
+
+Int64Vec3::Int64Vec3(int64_t xyz) : x(xyz), y(xyz), z(xyz)
+{
+
+}
+
+Int64Vec3::Int64Vec3(int64_t _x, int64_t _y, int64_t _z) : x(_x), y(_y), z(_z)
+{
+
+}
+
+bool Int64Vec3::IsZero() const
+{
+	return x == 0 && y == 0 && z == 0;
+}
+
+Int64Vec3 Int64Vec3::RotateByDegrees(float degrees) const
+{
+	return RotateByRadians(Math::DegreesToRadians(degrees));
+}
+
+Int64Vec3 Int64Vec3::RotateByRadians(float radians) const
+{
+	float sine = 0.0f;
+	float cosine = 0.0f;
+	Math::SinCos(sine, cosine, radians);
+	float x1 = cosine * (float)x - (float)y * sine;
+	float y1 = sine * (float)x + (float)y * cosine;
+	return Int64Vec3((int64_t)x1, (int64_t)y1, z);
+}
+
+double Int64Vec3::Length() const
+{
+	return sqrt((double)LengthSqr());
+}
+
+uint64_t Int64Vec3::LengthSqr() const
+{
+	return x * x + y * y + z * z;
+}
+
+size_t Int64Vec3::ToHash() const
+{
+	return (size_t)Hash::Hash64(x * 17ULL + y * 23ULL + z * 51ULL);
+}
+
+Vec3 Int64Vec3::Normalize() const
+{
+	const double len = Length();
+	return Vec3((float)(x / len), (float)(y / len), (float)(z / len));
+}
+
+Int64Vec3& Int64Vec3::operator+=(const Int64Vec3& RHS)
+{
+	x += RHS.x;
+	y += RHS.y;
+	z += RHS.z;
+
+	return *this;
+}
+
+Int64Vec3 Int64Vec3::operator+(const Int64Vec3& RHS) const
+{
+	return Int64Vec3(x + RHS.x, y + RHS.y, z + RHS.z);
+}
+
+Int64Vec3 Int64Vec3::operator-(const Int64Vec3& RHS) const
+{
+	return Int64Vec3(x - RHS.x, y - RHS.y, z - RHS.z);
+}
+
+Int64Vec3& Int64Vec3::operator-=(const Int64Vec3& RHS)
+{
+	x -= RHS.x;
+	y -= RHS.y;
+	z -= RHS.z;
+
+	return *this;
+}
+
+Int64Vec3 Int64Vec3::operator*(int64_t scalar) const
+{
+	return Int64Vec3(x * scalar, y * scalar, z * scalar);
+}
+
+Int64Vec3& Int64Vec3::operator*=(int64_t scalar)
+{
+	x *= scalar;
+	y *= scalar;
+	z *= scalar;
+
+	return *this;
+}
+
+Int64Vec3 Int64Vec3::operator/(int64_t scalar) const
+{
+	return Int64Vec3(x / scalar, y / scalar, z / scalar);
+}
+
+int64_t Int64Vec3::operator[](int i) const
+{
+	switch (i)
+	{
+	case 0: return x; break;
+	case 1: return y; break;
+	case 2: return z; break;
+	default: assert(false);
+	}
+
+	return x;
+}
+
+int64_t& Int64Vec3::operator[](int i)
+{
+	switch (i)
+	{
+	case 0: return x; break;
+	case 1: return y; break;
+	case 2: return z; break;
+	default: assert(false);
+	}
+
+	return x;
+}
+
+bool Int64Vec3::AllLessThan(const Int64Vec3& RHS) const
+{
+	return x < RHS.x && y < RHS.y && z < RHS.z;
+}
+
+bool Int64Vec3::AnyLessThan(const Int64Vec3& RHS) const
+{
+	return x < RHS.x || y < RHS.y || z < RHS.z;
+}
+
+bool Int64Vec3::AllLessThanOrEqual(const Int64Vec3& RHS) const
+{
+	return x <= RHS.x && y <= RHS.y && z <= RHS.z;
+}
+
+bool Int64Vec3::AnyLessThanOrEqual(const Int64Vec3& RHS) const
+{
+	return x <= RHS.x || y <= RHS.y || z <= RHS.z;
+}
+
+bool Int64Vec3::AllGreaterThan(const Int64Vec3& RHS) const
+{
+	return x > RHS.x && y > RHS.y && z > RHS.z;
+}
+
+bool Int64Vec3::AnyGreaterThan(const Int64Vec3& RHS) const
+{
+	return x > RHS.x || y > RHS.y || z > RHS.z;
+}
+
+bool Int64Vec3::AllGreaterThanOrEqual(const Int64Vec3& RHS) const
+{
+	return x >= RHS.x && y >= RHS.y && z >= RHS.z;
+}
+
+bool Int64Vec3::AnyGreaterThanOrEqual(const Int64Vec3& RHS) const
+{
+	return x >= RHS.x || y >= RHS.y || z >= RHS.z;
+}
+
+Int64Vec3 Int64Vec3::PerComponentMin(const Int64Vec3& RHS) const
+{
+	return Int64Vec3(std::min(x, RHS.x), std::min(y, RHS.y), std::min(z, RHS.z));
+}
+
+Int64Vec3 Int64Vec3::PerComponentMax(const Int64Vec3& RHS) const
+{
+	return Int64Vec3(std::max(x, RHS.x), std::max(y, RHS.y), std::max(z, RHS.z));
 }
 
 bool IntVec3::operator!=(const IntVec3& RHS) const

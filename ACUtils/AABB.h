@@ -198,3 +198,65 @@ private:
 	IntVec2 Min;
 	IntVec2 Max;
 };
+
+struct Int64AABB2D
+{
+public:
+	Int64AABB2D() : Min(Int64Vec2::Zero), Max(Int64Vec2::Zero) {};
+	Int64AABB2D(const Int64Vec2& _min, const Int64Vec2& _max) : Min(_min), Max(_max) {};
+	Int64AABB2D(const Int64Vec2& _center, const int64_t Extents) : Min(_center - Int64Vec2(Extents)), Max(_center + Int64Vec2(Extents)) {}
+	bool Intersects(const Int64AABB2D& Other) const
+	{
+		if (Min.AnyGreaterThan(Other.GetMax()) || Max.AnyLessThan(Other.GetMin()))
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	Int64AABB2D Intersection(const Int64AABB2D& Other) const
+	{
+		assert(Intersects(Other));
+		return Int64AABB2D(Min.PerComponentMax(Other.GetMin()), Max.PerComponentMin(Other.GetMax()));
+	}
+
+	Int64AABB2D ExpandBy(const Int64Vec2& Expansion) const
+	{
+		return Int64AABB2D(Min - Expansion, Max + Expansion);
+	}
+
+	Int64AABB2D ExpandToContain(const Int64Vec2& Point) const
+	{
+		return Int64AABB2D(Min.PerComponentMin(Point), Max.PerComponentMax(Point));
+	}
+
+	const Int64Vec2& GetMin() const { return Min; }
+	const Int64Vec2& GetMax() const { return Max; }
+	Int64Vec2 GetCenter() const { return Min + (Max - Min) / 2; }
+	Int64Vec2 GetSize() const { return Max - Min; }
+
+	bool Contains(const Int64Vec2& Pos) const
+	{
+		return Pos.AllGreaterThanOrEqual(Min) && Pos.AllLessThanOrEqual(Max);
+	}
+
+	bool operator==(const Int64AABB2D& RHS) const
+	{
+		return Min == RHS.Min && Max == RHS.Max;
+	}
+
+	bool operator!=(const Int64AABB2D& RHS) const
+	{
+		return Min != RHS.Min || Max != RHS.Max;
+	}
+
+	static Int64AABB2D MakeFromCenterAndExtents(const Int64Vec2& Center, const Int64Vec2& Extents)
+	{
+		return Int64AABB2D(Center - Extents, Center + Extents);
+	}
+
+private:
+	Int64Vec2 Min;
+	Int64Vec2 Max;
+};

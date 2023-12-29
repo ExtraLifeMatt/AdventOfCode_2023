@@ -109,7 +109,7 @@ private:
 			ImColor bgColor = IM_COL32(50, 50, 50, 255);
 			draw_list->AddRectFilled(canvas_xy, canvas_br, bgColor);
 			draw_list->PushClipRect(canvas_xy, canvas_br, true);
-			for(const Edge& edge : m_Edges)
+			for(const Vert& edge : m_Edges)
 			{
 				ImVec2 p1 = ImVec2(drawOrigin.x + (float)edge.Start.x * canvasScalar.x, drawOrigin.y - (float)edge.Start.y * canvasScalar.y);
 				ImVec2 p2 = ImVec2(drawOrigin.x + (float)edge.End.x * canvasScalar.x, drawOrigin.y - (float)edge.End.y * canvasScalar.y);
@@ -165,7 +165,7 @@ private:
 		std::vector<IntVec2> allPoints;
 
 		allPoints.reserve(m_Edges.size());
-		for (const Edge& edge : m_Edges)
+		for (const Vert& edge : m_Edges)
 		{
 			allPoints.push_back(edge.End);
 		}
@@ -188,10 +188,10 @@ private:
 		AdventGUIInstance::PartTwo(context);
 	}
 
-	struct Edge
+	struct Vert
 	{
-		Edge():Start(IntVec2::Zero), End(IntVec2::Zero), Color(0){}
-		Edge(const IntVec2& _start, const IntVec2& _end, uint32_t _color):Start(_start), End(_end), Color(_color) {};
+		Vert():Start(IntVec2::Zero), End(IntVec2::Zero), Color(0){}
+		Vert(const IntVec2& _start, const IntVec2& _end, uint32_t _color):Start(_start), End(_end), Color(_color) {};
 		IntVec2 Start;
 		IntVec2 End;
 		uint32_t Color;
@@ -199,7 +199,7 @@ private:
 	uint32_t m_totalWalk;
 	uint64_t m_partTwoTotalWalk;
 	IntAABB2D m_Bounds;
-	std::vector<Edge> m_Edges;
+	std::vector<Vert> m_Edges;
 	std::vector<Int64Vec2> m_PointsP2;
 	uint32_t m_MapWidth;
 };
